@@ -381,6 +381,7 @@ namespace Server
                     else if (p.tipPoruke == TipPoruke.Promasaj)
                     {
                         Console.WriteLine(p.poruka);
+                        p=PrimiPoruku();
                         break;
                     }
                     else if (p.tipPoruke == TipPoruke.Izgubio)

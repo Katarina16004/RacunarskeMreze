@@ -594,8 +594,8 @@ namespace Server
                     {
                         p.tipPoruke = TipPoruke.Izgubio;
                         trenutniIgrac.izgubio = true;
-                        krajPoteza = true;
                     }
+                    krajPoteza = true;
 
                     break;
                 case 2: //kada napadac potopi podmornicu protivniku, dobija sansu da gadja opet. Ukoliko je potopio sve podmornice, dobija sledeci potez
