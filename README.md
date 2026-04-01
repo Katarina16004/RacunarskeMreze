@@ -30,62 +30,16 @@ Both **UDP** and **TCP** sockets are used for communication.
   - Difficulty levels defined by:  
     - Board size  
     - Allowed consecutive misses  
-
-- **Multiplayer**:  
-  - Use of `select()` for socket multiplexing.  
-  - Allows multiple players to play simultaneously without blocking.  
-
 ---
 
-## Tasks
-
-### 
-- **Basic Design**  
-  Create a block diagram showing communication between server and clients.  
-
-- **Server Setup**  
-  - Input number of players, board size, allowed misses.  
-  - Use UDP for player registration.  
-  - Provide TCP connection details after registration.  
-
-- **Client Initialization**  
-  - Send `PRIJAVA` via UDP.  
-  - After TCP connection, send submarine positions based on board size.  
-
-- **Player Data Management**  
-  Define a `Player` class with attributes:  
-  - Player ID  
-  - Misses counter  
-  - Submarine positions  
-  - Board matrix  
-
-- **Single Turn**  
-  - Player selects an opponent and target cell.  
-  - Server validates and responds with `MISS` / `HIT` / `SINK`.  
-  - Hits grant extra turns.  
-
-###
-- **Non-blocking Multiplayer**  
-  Implement socket multiplexing (`select`) for handling multiple clients concurrently.  
-
-- **Game State Updates**  
-  - Update submarine arrays and boards after each shot.  
-  - Ensure players can view the updated board state of selected opponents.  
-
-- **Endgame Conditions**  
-  - Eliminate players who exceed misses or lose all submarines.  
-  - Last remaining player declared as winner.  
-
-- **Restart Option**  
-  - Offer new game to all players after a round.  
-  - If declined, close connections gracefully.  
-
-- **Final Diagram**  
-  Update the initial block diagram to show full multiplayer interactions and server logic.  
-
-
-## 🚀 Future Improvements
-- Graphical client UI (instead of CLI).  
-- Spectator mode.  
-- Support for custom submarine types.  
-- Enhanced security for connections.  
+## Future Improvements
+- Graphical client **UI** (WPF)
+- Support for multiple submarine types and advanced rules
+- Add a **super move** that can be used only once per game, with configurable behavior
+- Per-move **timer**
+    - On timeout, a simple bot plays a random valid move instead of the player.
+    - On the second bot move, the player receives a warning that one more timeout will end the game for them.
+    - On the third timeout, the player is disconnected and considered defeated, while the remaining players continue.
+- Log the full course of each game to a file
+- **Encrypt messages** between client and server.
+  
