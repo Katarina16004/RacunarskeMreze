@@ -366,27 +366,69 @@ namespace Server
             {
                 Console.WriteLine("Dosadasnja gadjanja protivnicke table:\n" + p.poruka);
 
-                //odabir polja
-                int polje;
+                // Unos polja sa X,Y koordinatama
+                int polje = -1;
+                bool validanUnos = false;
+
                 do
                 {
-                    Console.WriteLine($"Unesite koje polje zelite da gadjate (1-{velTable * velTable}):");
-                } while (!int.TryParse(Console.ReadLine(), out polje) || polje < 1 || polje > velTable * velTable);
+                    Console.Write($"Gadjaj - Unesite X,Y (1-{velTable}): ");
+                    string unos = Console.ReadLine();
 
+                    string[] delovi = unos.Split(',');
+
+                    if (delovi.Length != 2)
+                    {
+                        Console.WriteLine("Pogresan format! Unesite: X,Y (npr: 1,1)");
+                        continue;
+                    }
+
+                    if (!int.TryParse(delovi[0].Trim(), out int x) || !int.TryParse(delovi[1].Trim(), out int y))
+                    {
+                        Console.WriteLine("Unesite brojeve!");
+                        continue;
+                    }
+
+                    if (x < 1 || x > velTable || y < 1 || y > velTable)
+                    {
+                        Console.WriteLine($"X i Y moraju biti od 1 do {velTable}");
+                        continue;
+                    }
+
+                    // X je red, Y je kolona
+                    polje = (x - 1) * velTable + y;
+                    validanUnos = true;
+
+                } while (!validanUnos);
 
                 PosaljiPoruku(null, null, TipPoruke.Napad, polje.ToString());
-
 
                 do
                 {
                     p = PrimiPoruku();
-                    //Ovo je stavljeno da bi se izbeglo izvrsavanje komande ponovi, na prvom pokusaju kad to nije potrebno
+
                     if (p.tipPoruke == TipPoruke.Ponovi)
                     {
+                        Console.WriteLine("Polje je već gadjano. Pokušajte ponovo.");
+
                         do
                         {
-                            Console.WriteLine($"Uneto polje je vec gadjano. Unesite koje polje zelite da gadjate (1-{velTable * velTable}):");
-                        } while (!int.TryParse(Console.ReadLine(), out polje) || polje < 1 || polje > velTable * velTable);
+                            Console.Write($"Gadjaj - Unesite X,Y (1-{velTable}): ");
+                            string unos = Console.ReadLine();
+                            string[] delovi = unos.Split(',');
+
+                            if (delovi.Length == 2 && int.TryParse(delovi[0].Trim(), out int x) &&
+                                int.TryParse(delovi[1].Trim(), out int y) &&
+                                x >= 1 && x <= velTable && y >= 1 && y <= velTable)
+                            {
+                                polje = (y - 1) * velTable + x;
+                                break;
+                            }
+                            else
+                            {
+                                Console.WriteLine("Pogresan unos!");
+                            }
+                        } while (true);
 
                         PosaljiPoruku(null, null, TipPoruke.Napad, polje.ToString());
                     }
@@ -398,25 +440,22 @@ namespace Server
                     else if (p.tipPoruke == TipPoruke.Promasaj)
                     {
                         Console.WriteLine(p.poruka);
-                        p=PrimiPoruku();
+                        p = PrimiPoruku();
                         break;
                     }
                     else if (p.tipPoruke == TipPoruke.Izgubio)
                     {
-                        Console.WriteLine("Izgubio si posto si pogresio maksimalni broj puta!");
-                        p = PrimiPoruku();//Da bi se zavrsio ceo ciklus poslace table i par obavestenja, nepotrebna da se prikazu, al ipak mora da ih primi
-                        p = PrimiPoruku();//
-                        p = PrimiPoruku();//
+                        Console.WriteLine("Izgubio si posto si pogresio maksimalan broj puta!");
+                        p = PrimiPoruku();
+                        p = PrimiPoruku();
+                        p = PrimiPoruku();
                         Console.WriteLine(p.poruka);
                         GlasajNovaPartija();
                     }
-
-
                 } while (p.tipPoruke == TipPoruke.Ponovi);
 
-
                 p = PrimiPoruku();
-                Console.WriteLine(p.poruka); //tabla
+                Console.WriteLine(p.poruka);
 
                 return true;
             }
@@ -464,21 +503,34 @@ namespace Server
 
         private static void PrikaziTablu(int[,] matrica)
         {
+            Console.WriteLine("\n Stanje vase table: ");
 
-            Console.WriteLine("Stanje vase table: ");
-            Console.Write("\t");
+            // Ispis zaglavlja (brojevi kolona)
+            Console.Write("   ");
+            for (int j = 0; j < matrica.GetLength(1); j++)
+            {
+
+                if (j == 9)
+                    Console.Write(" ");
+                Console.Write($"{j + 1,2}");
+            }
+            Console.WriteLine();
+
+            // Ispis redova sa indeksima
             for (int i = 0; i < matrica.GetLength(0); i++)
             {
+                Console.Write($"{i + 1,2} ");  // Redni broj
+
                 for (int j = 0; j < matrica.GetLength(1); j++)
                 {
-                    //Console.Write(matrica[i, j] + " ");
                     if (matrica[i, j] == 1)
-                        Console.Write("O ");
+                        Console.Write(" O");  // Brod
                     else
-                        Console.Write("- ");
+                        Console.Write(" -");  // Prazno
                 }
-                Console.Write("\n\t");
+                Console.WriteLine();
             }
+            Console.WriteLine();
 
         }
 

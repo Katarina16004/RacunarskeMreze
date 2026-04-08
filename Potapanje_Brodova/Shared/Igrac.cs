@@ -108,35 +108,62 @@ namespace Shared
         }
         public string PrikaziMatricuGadjana()
         {
-            string s = "\t";
-            for (int i = 0; i < matrica.GetLength(0); i++)
+            string s = "   ";  // Razmak za ugao
+
+            // Ispis zaglavlja (brojevi kolona)
+            for (int j = 0; j < matricaGadjana.GetLength(1); j++)
             {
-                for (int j = 0; j < matrica.GetLength(1); j++)
+                if (j == 9)
+                    s = s + " ";
+                s = s + string.Format("{0,2}", j + 1);
+            }
+            s = s + "\n";
+
+            // Ispis redova sa indeksima
+            for (int i = 0; i < matricaGadjana.GetLength(0); i++)
+            {
+                s = s + string.Format("{0,2}", i + 1) + " ";  // Redni broj
+
+                for (int j = 0; j < matricaGadjana.GetLength(1); j++)
                 {
                     if (matricaGadjana[i, j] == 0)
-                        s = s + "- ";
+                        s = s + " -";  // Negazdjano
                     else if (matricaGadjana[i, j] == 1)
-                        s = s + "+ ";
+                        s = s + " +";  // Promasaj
                     else
-                        s = s + "x ";
+                        s = s + " x";  // Pogodak
                 }
-                s = s + "\n\t"; // Novi red posle svake vrste
+                s = s + "\n";
             }
             return s;
         }
+
         public string PrikaziMatricu()
         {
-            string s = "\t";
+            string s = "   ";  // Razmak za ugao
+
+            // Ispis zaglavlja (brojevi kolona)
+            for (int j = 0; j < matrica.GetLength(1); j++)
+            {
+                if (j == 9)
+                    s = s + " ";
+                s = s + string.Format("{0,2}", j + 1);
+            }
+            s = s + "\n";
+
+            // Ispis redova sa indeksima
             for (int i = 0; i < matrica.GetLength(0); i++)
             {
+                s = s + string.Format("{0,2}", i + 1) + " ";  // Redni broj
+
                 for (int j = 0; j < matrica.GetLength(1); j++)
                 {
                     if (matrica[i, j] == 1)
-                        s = s + "O ";  // Prikaži 'O' za brod
+                        s = s + " O";  // Brod
                     else
-                        s = s + "- ";  // Prikaži '-' za prazno polje
+                        s = s + " -";  // Prazno
                 }
-                s = s + "\n\t"; // Novi red posle svake vrste
+                s = s + "\n";
             }
             return s;
         }
