@@ -131,8 +131,10 @@ namespace Shared
             {
                 for (int j = 0; j < matrica.GetLength(1); j++)
                 {
-
-                    s = s + matrica[i, j] + " ";
+                    if (matrica[i, j] == 1)
+                        s = s + "O ";  // Prikaži 'O' za brod
+                    else
+                        s = s + "- ";  // Prikaži '-' za prazno polje
                 }
                 s = s + "\n\t"; // Novi red posle svake vrste
             }

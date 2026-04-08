@@ -14,8 +14,8 @@ namespace Server
     {
         public static string ime = null;
         public static Socket clientSocket = null;
-        private static int brojPodmornica = 0;
-        private static int velTable = 0;
+        private static int brojPodmornica = 10;
+        private static int velTable = 10;
         public static bool PrvaPartija = true;
         public static int MaxUzastopnihGresaka = 0;
 
@@ -38,7 +38,7 @@ namespace Server
             do
             {
                 Console.WriteLine("Dobrodosli u potapanje brodova! \n Pritisnite sledece opcije:" +
-                           "\n 1) Nova igra \n 2) Izlaz \n 3) Pokreni jos 10 klijenata");
+                           "\n 1) Nova igra \n 2) Izlaz");
                 int.TryParse(Console.ReadLine(), out x);
                 switch (x)
                 {
@@ -52,9 +52,9 @@ namespace Server
                         Thread.Sleep(1000);
                         Environment.Exit(0);
                         break;
-                    case 3:
-                        UpaliKlijente();
-                        break;
+                    //case 3:
+                       // UpaliKlijente();
+                       // break;
                     default:
                         Console.WriteLine("Greska!");
                         break;
@@ -161,17 +161,34 @@ namespace Server
             try
             {
 
-
-
-
                 p = PrimiPoruku();
-                Console.WriteLine("Primljena poruka: " + p.poruka);
-                string[] delovi = p.poruka.Split(' ');
-                brojPodmornica = int.Parse(delovi[delovi.Length - 1]);
+                Console.WriteLine("Primljena poruka: ");
 
-                string velTableS = delovi[2].Remove(delovi[2].Length - 1);
-                MaxUzastopnihGresaka = int.Parse(delovi[7]);
-                velTable = int.Parse(velTableS);
+                string[] redovi = p.poruka.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (string red in redovi)
+                {
+                    Console.WriteLine("\t" + red);
+
+                    if (red.Contains("Velicina table"))
+                    {
+                        // Format: "Velicina table: 10"
+                        string[] delovi = red.Split(':');
+                        velTable = int.Parse(delovi[1].Trim());
+                    }
+                    else if (red.Contains("Broj podmornica"))
+                    {
+                        // Format: "Broj podmornica: 10"
+                        string[] delovi = red.Split(':');
+                        brojPodmornica = int.Parse(delovi[1].Trim());
+                    }
+                    else if (red.Contains("Maksimalan broj uzastopnih gresaka"))
+                    {
+                        // Format: "Maksimalan broj uzastopnih gresaka: 3"
+                        string[] delovi = red.Split(':');
+                        MaxUzastopnihGresaka = int.Parse(delovi[1].Trim());
+                    }
+                }
             }
             catch (SocketException e)
             {
@@ -454,11 +471,11 @@ namespace Server
             {
                 for (int j = 0; j < matrica.GetLength(1); j++)
                 {
-                    Console.Write(matrica[i, j] + " ");
-                    /*if (matrica[i, j] == 1)
+                    //Console.Write(matrica[i, j] + " ");
+                    if (matrica[i, j] == 1)
                         Console.Write("O ");
                     else
-                        Console.Write("- ");*/
+                        Console.Write("- ");
                 }
                 Console.Write("\n\t");
             }

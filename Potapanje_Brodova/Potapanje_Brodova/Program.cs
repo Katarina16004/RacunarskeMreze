@@ -21,7 +21,7 @@ namespace Server
 
         public static Socket serverSocket = null;
         private static int MaxBrojIgraca = 0;
-        private static int VelicinaTable = 0;
+        private static int VelicinaTable = 10;
         private static int MaxUzastopnihGresaka = 0;
         private static bool NovaIgra = true;
         private static bool krajPartije = false;
@@ -151,12 +151,6 @@ namespace Server
             Console.WriteLine("Svi igraci su spremni za igru!");
             do
             {
-                Console.WriteLine("Unesite dimenziju table:");
-                int.TryParse((string)Console.ReadLine(), out VelicinaTable);
-            }
-            while (VelicinaTable < 0);
-            do
-            {
                 Console.WriteLine("Unesite maksimalan broj uzastopnih gresaka:");
                 int.TryParse((string)Console.ReadLine(), out MaxUzastopnihGresaka);
             } while (MaxUzastopnihGresaka > VelicinaTable * VelicinaTable - 1);
@@ -197,8 +191,8 @@ namespace Server
         private static void IncijalizujTable()
         {
             // slanje informacija o igri klijentima
-            int brPodmornica = VelicinaTable * VelicinaTable - MaxUzastopnihGresaka;
-            string info = $"Velicina table: {VelicinaTable}, maksimalan broj uzastopnih gresaka: {MaxUzastopnihGresaka} broj podmornica: {brPodmornica}";
+            int brPodmornica = 10; 
+            string info = $"\nVelicina table: {VelicinaTable}\nBroj podmornica: {brPodmornica}\nMaksimalan broj uzastopnih gresaka: {MaxUzastopnihGresaka}";
 
 
 
