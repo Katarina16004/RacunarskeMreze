@@ -354,8 +354,10 @@ namespace Server
                         Console.WriteLine("Poslata tablica gadjanja: " + napadnuti.PrikaziMatricuGadjana());
 
                     } while (!krajPoteza);
+                    Thread.Sleep(1000);
                 }
                 trenutniIgrac = (trenutniIgrac + 1) % Igraci.Count;
+                //mozda ovde 
             } while (!krajPartije);
         }
 
@@ -462,7 +464,7 @@ namespace Server
                 {
                     Poruka p = new Poruka(null, null, i == igracNaPotezu ? TipPoruke.Napad : TipPoruke.Obavestenje, poruka);
                     i.socket.Send(p.Serializuj());
-                    Console.WriteLine($"Poruka poslata igracu {i.ime}");
+                    Console.WriteLine($"Poruka poslata igracu {i.ime}: {p.poruka}");
                 }
                 catch (SocketException ex)
                 {
@@ -536,7 +538,7 @@ namespace Server
             else
             {
                 krajPartije = false;
-                Thread.Sleep(1000);
+                Thread.Sleep(2000);
                 p.tipPoruke = TipPoruke.Ostalo;
                 Console.WriteLine("Pokrecemo novu partiju");
             }
@@ -683,33 +685,7 @@ namespace Server
 
             ObavestiOstaleONapadu(trenutniIgrac, Protivnik, poruka);
 
-            if (!krajPoteza)
-            {
-                Thread.Sleep(500);
-                PosaljiTabluGadjanja(trenutniIgrac, Protivnik);
-
-                Thread.Sleep(300);
-                int sledeci = (Igraci.IndexOf(trenutniIgrac) + 1) % Igraci.Count;
-                Igrac sledreciIgrac = Igraci[sledeci];
-
-                string obavestenjeNaPotezu = $"{sledreciIgrac.ime} je na potezu. Sacekajte..";
-                Poruka obavestenje = new Poruka();
-                obavestenje.tipPoruke = TipPoruke.Obavestenje;
-                obavestenje.poruka = obavestenjeNaPotezu;
-
-                foreach (Igrac igrac in Igraci)
-                {
-                    try
-                    {
-                        igrac.socket.Send(obavestenje.Serializuj());
-                        Console.WriteLine($"Obavestenje poslato igracu {igrac.ime}: {obavestenjeNaPotezu}");
-                    }
-                    catch (SocketException ex)
-                    {
-                        Console.WriteLine($"Greska pri slanju obavestenja igracu {igrac.ime}: {ex.Message}");
-                    }
-                }
-            }
+            
 
             return krajPoteza;
         }
