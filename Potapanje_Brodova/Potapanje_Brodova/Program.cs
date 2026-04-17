@@ -183,7 +183,7 @@ namespace Server
                 try
                 {
                     clientSocket.Send(p.Serializuj());
-                    Console.WriteLine($"Poruka poslata klijentu: {i.ime}");
+                    Console.WriteLine($"Poruka poslata klijentu: {i.ime} Tip poruke: {p.tipPoruke}");
                 }
                 catch (SocketException ex)
                 {
@@ -303,6 +303,7 @@ namespace Server
                 Igrac igracNaPotezu = Igraci[trenutniIgrac];
                 if (!igracNaPotezu.izgubio)
                 {
+
                     ObavestiIgraceONapadacu(igracNaPotezu);
 
                     if (krajPartije)
@@ -350,14 +351,19 @@ namespace Server
                             krajPoteza = NapadniProtivnika(igracNaPotezu, imeProtivnika, polje);
                         } while (rezultatGadjanja == 0);
 
-                        PosaljiTabluGadjanja(igracNaPotezu, napadnuti);
-                        Console.WriteLine("Poslata tablica gadjanja: " + napadnuti.PrikaziMatricuGadjana());
+                        if (!krajPoteza)
+
+                        {
+                            PosaljiTabluGadjanja(igracNaPotezu, napadnuti);
+                            Console.WriteLine("Poslata tablica gadjanja: " + napadnuti.PrikaziMatricuGadjana());
+                        }
 
                     } while (!krajPoteza);
                     Thread.Sleep(1000);
                 }
                 trenutniIgrac = (trenutniIgrac + 1) % Igraci.Count;
-                //mozda ovde 
+                
+
             } while (!krajPartije);
         }
 
@@ -422,7 +428,7 @@ namespace Server
                     p.poruka = poruka;
                     p.tipPoruke = TipPoruke.GlasanjeNova;
                     i.socket.Send(p.Serializuj());
-                    Console.WriteLine($"Poruka poslana igracu {i.ime}: {poruka}");
+                    Console.WriteLine($"Poruka poslata igracu {i.ime}: {poruka} Tip poruke: {p.tipPoruke}");
                 }
                 catch (SocketException ex)
                 {
@@ -457,15 +463,24 @@ namespace Server
                 }
                 else
                 {
-                    poruka = $"{igracNaPotezu.ime} je na potezu. Sacekajte..";
+                    if(i.izgubio == false)
+                        poruka = $"{igracNaPotezu.ime} je na potezu. Sacekajte..";
                 }
 
                 try
                 {
-                    Poruka p = new Poruka(null, null, i == igracNaPotezu ? TipPoruke.Napad : TipPoruke.Obavestenje, poruka);
-                    i.socket.Send(p.Serializuj());
-                    Console.WriteLine($"Poruka poslata igracu {i.ime}: {p.poruka}");
-                }
+                    if (i == igracNaPotezu || !i.izgubio)
+                    {
+                        Poruka p = new Poruka(
+                            null,
+                            null,
+                            i == igracNaPotezu ? TipPoruke.Napad : TipPoruke.Obavestenje,
+                            poruka);
+
+                        i.socket.Send(p.Serializuj());
+                        Console.WriteLine($"Poruka poslata igracu {i.ime}: {p.poruka} Tip poruke: {p.tipPoruke}");
+                    }
+                }   
                 catch (SocketException ex)
                 {
                     Console.WriteLine($"Greska pri slanju poruke igracu {i.ime}: {ex.Message}");
@@ -475,23 +490,7 @@ namespace Server
 
         private static void GlasanjeNovaIgra()
         {
-            string poruka = "Unesite 1 ukoliko zelite novu partiju, 2 ukoliko ne zelite:";
             Poruka p = new Poruka();
-            p.poruka = poruka;
-            p.tipPoruke = TipPoruke.Obavestenje;
-            foreach (Igrac i in Igraci)
-            {
-                try
-                {
-                    i.socket.Send(p.Serializuj());
-                    Console.WriteLine($"Poruka poslata igracu {i.ime}: {p.poruka}");
-                }
-                catch (SocketException ex)
-                {
-                    Console.WriteLine($"Greska pri slanju poruke igracu {i.ime}: {ex.Message}");
-                }
-            }
-
             int brojPrimljenihPoruka = 0;
 
             while (brojPrimljenihPoruka < clientSockets.Count)
@@ -549,7 +548,7 @@ namespace Server
                 try
                 {
                     i.socket.Send(p.Serializuj());
-                    Console.WriteLine($"Poruka poslata igracu {i.ime}");
+                    Console.WriteLine($"Poruka poslata igracu {i.ime} Tip poruke: {p.tipPoruke}");
                 }
                 catch (SocketException ex)
                 {
@@ -661,7 +660,14 @@ namespace Server
                     poruka = $"Potopljena podmornica! {imePodmornice}";
                     info = $"\nPreostalo podmornica protivniku je: {Protivnik.GetBrojPreostalihPodmornica()}\n";
                     p.tipPoruke = TipPoruke.Pogodak;
-                    krajPoteza = Protivnik.DaLiSuSvePodmornicePotonjene() ? true : false;
+
+                    if(Protivnik.DaLiSuSvePodmornicePotonjene())
+                    {
+                        Protivnik.izgubio = true;
+                        krajPoteza = true;
+
+                    }
+
                     break;
 
                 default:
@@ -676,7 +682,7 @@ namespace Server
             try
             {
                 trenutniIgrac.socket.Send(p.Serializuj());
-                Console.WriteLine($"Poruka poslata igracu {trenutniIgrac.ime}");
+                Console.WriteLine($"Poruka poslata igracu {trenutniIgrac.ime} Tip poruke: {p.tipPoruke}");
             }
             catch (SocketException ex)
             {
@@ -685,7 +691,7 @@ namespace Server
 
             ObavestiOstaleONapadu(trenutniIgrac, Protivnik, poruka);
 
-            
+
 
             return krajPoteza;
         }

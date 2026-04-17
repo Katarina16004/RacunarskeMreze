@@ -205,6 +205,7 @@ namespace Server
                 {
                     Thread.Sleep(1000);
                     Poruka p = PrimiPoruku();
+                    Console.WriteLine($"Poruka: {p.poruka} , Tip: {p.tipPoruke}");
 
                     if (p == null || p.poruka == null)
                         continue;
@@ -301,15 +302,11 @@ namespace Server
             Console.WriteLine("═══════════════════════════════════════\n");
             Console.WriteLine(poruka);
 
-            int preostaloBrodova = i.podmornice.Count;
+            int preostaloBrodova = i.GetBrojPreostalihPodmornica();
             if (preostaloBrodova == 0)
             {
                 Console.WriteLine("\nIzgubio si partiju!");
                 Console.WriteLine("Sacekaj da ostali igraci zavrse, nakon toga bice glasanje za novu partiju!");
-            }
-            else
-            {
-                Console.WriteLine($"\nPreostalo ti je: {preostaloBrodova} brodova!");
             }
 
             Thread.Sleep(2000);
@@ -318,8 +315,9 @@ namespace Server
         private static void GlasajNovaPartija()
         {
             Console.WriteLine("Stigli smo do glasanja za novu partiju!");
-            Poruka p = PrimiPoruku();
-            Console.WriteLine(p.poruka);
+           
+            Console.WriteLine("Unesite 1 ukoliko zelite novu partiju, 2 ukoliko ne zelite:");
+
             int x;
             do
             {
@@ -327,7 +325,7 @@ namespace Server
             } while (x != 1 && x != 2);
 
             PosaljiPoruku(null, null, TipPoruke.Obavestenje, x.ToString());
-            p = PrimiPoruku();
+            Poruka p = PrimiPoruku();
             if (p.tipPoruke == TipPoruke.Kraj)
             {
                 Console.WriteLine("Neko od igraca je odbio da nastavi, program se zavrsava s radom!");
@@ -346,13 +344,22 @@ namespace Server
                 UspostaviTCPKonekciju();
             }
         }
-
         private static bool Napadaj()
         {
             Poruka p = PrimiPoruku();
 
             if (p == null || p.poruka == null)
                 return false;
+
+            if (p.tipPoruke == TipPoruke.GlasanjeNova)
+            {
+                Console.WriteLine("═══════════════════════════════════════");
+                Console.WriteLine("         NEKO JE ELIMINISAN! ");
+                Console.WriteLine("═══════════════════════════════════════\n");
+                Console.WriteLine(p.poruka);
+                //GlasajNovaPartija(p);
+                return false;
+            }
 
             Console.WriteLine("═══════════════════════════════════════");
             Console.WriteLine("           GADJANJA PROTIVNIKA ");
@@ -394,7 +401,7 @@ namespace Server
 
             PosaljiPoruku(null, null, TipPoruke.Napad, polje.ToString());
 
-            p = PrimiPoruku();
+            p = PrimiPoruku(); //prima info o uspesnosti napada
 
             if (p.tipPoruke == TipPoruke.Ponovi)
             {
@@ -423,6 +430,16 @@ namespace Server
                 p = PrimiPoruku();
             }
 
+            if (p.tipPoruke == TipPoruke.GlasanjeNova)
+            {
+                Console.WriteLine("═══════════════════════════════════════");
+                Console.WriteLine("         NEKO JE ELIMINISAN! ");
+                Console.WriteLine("═══════════════════════════════════════\n");
+                Console.WriteLine(p.poruka);
+               // GlasajNovaPartija();
+                return false;
+            }
+
             if (p.tipPoruke == TipPoruke.Pogodak)
             {
                 Console.WriteLine("═══════════════════════════════════════");
@@ -430,6 +447,10 @@ namespace Server
                 Console.WriteLine("═══════════════════════════════════════\n");
                 Console.WriteLine(p.poruka);
                 Thread.Sleep(2000);
+                if (p.poruka.Contains("0 brodova") || p.Napadnut.GetBrojPreostalihPodmornica() == 0)
+                {
+                    return false;  //ukoliko je izbacio nekoga
+                }
                 return true;
             }
             else if (p.tipPoruke == TipPoruke.Promasaj)
@@ -451,9 +472,8 @@ namespace Server
                 Console.WriteLine("             IZGUBIO SI! ");
                 Console.WriteLine("═══════════════════════════════════════\n");
                 Console.WriteLine(p.poruka);
+                Console.WriteLine("\nSacekaj da ostali igraci zavrse partiju...");
                 Thread.Sleep(2000);
-
-                GlasajNovaPartija();
                 return false;
             }
 
