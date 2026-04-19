@@ -17,6 +17,7 @@ namespace Server
         private static int velTable = 10;
         public static bool PrvaPartija = true;
         public static int MaxUzastopnihGresaka = 0;
+        private static bool superPotezIskoriscen = false;
 
         static void Main(string[] args)
         {
@@ -191,7 +192,7 @@ namespace Server
 
             p = PrimiPoruku();
             int[,] tabla = Igrac.PretvoriStringUMatricu(p.poruka);
-            //PrikaziTablu(tabla);
+            
             Thread.Sleep(2000);
 
             IgrajPartiju();
@@ -213,9 +214,15 @@ namespace Server
                     if (p.tipPoruke == TipPoruke.GlasanjeNova)
                     {
                         Console.WriteLine("═══════════════════════════════════════");
+                        Console.WriteLine("             KRAJ PARTIJE");
+                        Console.WriteLine("═══════════════════════════════════════\n");
+                        if(p.poruka.Contains(ime))
+                            Console.WriteLine("\tTI SI POBEDNIK!\n");
+                        else
+                            Console.WriteLine(p.poruka);
+                        Console.WriteLine("═══════════════════════════════════════");
                         Console.WriteLine("              GLASANJE");
                         Console.WriteLine("═══════════════════════════════════════\n");
-                        Console.WriteLine(p.poruka);
                         GlasajNovaPartija();
                     }
                     else if (p.tipPoruke == TipPoruke.Napad)
@@ -230,16 +237,6 @@ namespace Server
                                 string imeIgraca = linija.Substring(3).Trim();
                                 dostupniIgraci.Add(imeIgraca);
                             }
-                        }
-
-                        if (dostupniIgraci.Count == 0)
-                        {
-                            Console.WriteLine("═══════════════════════════════════════");
-                            Console.WriteLine("               POBEDA! ");
-                            Console.WriteLine("═══════════════════════════════════════\n");
-                            Console.WriteLine("Vi ste pobednik!");
-                            Thread.Sleep(2000);
-                            break;
                         }
 
                         string napadnuti = "";
@@ -351,38 +348,48 @@ namespace Server
             if (p == null || p.poruka == null)
                 return false;
 
-            if (p.tipPoruke == TipPoruke.GlasanjeNova)
-            {
-                Console.WriteLine("═══════════════════════════════════════");
-                Console.WriteLine("         NEKO JE ELIMINISAN! ");
-                Console.WriteLine("═══════════════════════════════════════\n");
-                Console.WriteLine(p.poruka);
-                //GlasajNovaPartija(p);
-                return false;
-            }
-
             Console.WriteLine("═══════════════════════════════════════");
             Console.WriteLine("           GADJANJA PROTIVNIKA ");
             Console.WriteLine("═══════════════════════════════════════\n");
             Console.WriteLine(p.poruka);
 
-            int polje = -1;
-            bool validanUnos = false;
+            bool koristiSuperPotez = false;
+            int izbor = 1;
 
-            do
+            if (!superPotezIskoriscen)
             {
-                Console.Write($"\nGadjaj - Unesite X,Y (1-{velTable}): ");
-                string unos = Console.ReadLine();
+                Console.WriteLine("\nIzaberite potez:");
+                Console.WriteLine("1 - Obicno gadjanje");
+                Console.WriteLine("2 - Super potez (gadja 3x3 oko izabranog polja, samo jednom po partiji)");
 
+                do
+                {
+                    Console.Write("Vas izbor (1 ili 2): ");
+                    int.TryParse(Console.ReadLine(), out izbor);
+                } while (izbor != 1 && izbor != 2);
+
+                if (izbor == 2)
+                {
+                    koristiSuperPotez = true;
+                    superPotezIskoriscen = true;
+                }
+            }
+
+            int x, y;
+
+            while (true)
+            {
+                Console.Write($"\nUnesite X,Y (1-{velTable}): ");
+                string unos = Console.ReadLine();
                 string[] delovi = unos.Split(',');
 
                 if (delovi.Length != 2)
                 {
-                    Console.WriteLine("Pogresan format! Unesite: X,Y (npr: 1,1)");
+                    Console.WriteLine("Pogresan format! Unesite X,Y (npr: 5,5)");
                     continue;
                 }
 
-                if (!int.TryParse(delovi[0].Trim(), out int x) || !int.TryParse(delovi[1].Trim(), out int y))
+                if (!int.TryParse(delovi[0].Trim(), out x) || !int.TryParse(delovi[1].Trim(), out y))
                 {
                     Console.WriteLine("Unesite brojeve!");
                     continue;
@@ -394,87 +401,114 @@ namespace Server
                     continue;
                 }
 
-                polje = (x - 1) * velTable + y;
-                validanUnos = true;
+                break;
+            }
 
-            } while (!validanUnos);
-
-            PosaljiPoruku(null, null, TipPoruke.Napad, polje.ToString());
-
-            p = PrimiPoruku(); //prima info o uspesnosti napada
-
-            if (p.tipPoruke == TipPoruke.Ponovi)
+            if (!koristiSuperPotez) //obican potez, salje se samo jedno polje
             {
-                Console.WriteLine("Polje je već gadjano. Pokušajte ponovo.");
-
-                do
-                {
-                    Console.Write($"Gadjaj - Unesite X,Y (1-{velTable}): ");
-                    string unos = Console.ReadLine();
-                    string[] delovi = unos.Split(',');
-
-                    if (delovi.Length == 2 && int.TryParse(delovi[0].Trim(), out int x) &&
-                        int.TryParse(delovi[1].Trim(), out int y) &&
-                        x >= 1 && x <= velTable && y >= 1 && y <= velTable)
-                    {
-                        polje = (x - 1) * velTable + y;
-                        break;
-                    }
-                    else
-                    {
-                        Console.WriteLine("Pogresan unos!");
-                    }
-                } while (true);
-
+                int polje = (x - 1) * velTable + y;
                 PosaljiPoruku(null, null, TipPoruke.Napad, polje.ToString());
+
                 p = PrimiPoruku();
-            }
 
-            if (p.tipPoruke == TipPoruke.GlasanjeNova)
-            {
-                Console.WriteLine("═══════════════════════════════════════");
-                Console.WriteLine("         NEKO JE ELIMINISAN! ");
-                Console.WriteLine("═══════════════════════════════════════\n");
-                Console.WriteLine(p.poruka);
-               // GlasajNovaPartija();
-                return false;
-            }
-
-            if (p.tipPoruke == TipPoruke.Pogodak)
-            {
-                Console.WriteLine("═══════════════════════════════════════");
-                Console.WriteLine("             POGODAK! ");
-                Console.WriteLine("═══════════════════════════════════════\n");
-                Console.WriteLine(p.poruka);
-                Thread.Sleep(2000);
-                if (p.poruka.Contains("0 brodova") || p.Napadnut.GetBrojPreostalihPodmornica() == 0)
+                if (p.tipPoruke == TipPoruke.Ponovi)
                 {
-                    return false;  //ukoliko je izbacio nekoga
+                    Console.WriteLine("Polje je već gadjano. Pokušajte ponovo.");
+                    return false;
                 }
-                return true;
-            }
-            else if (p.tipPoruke == TipPoruke.Promasaj)
-            {
-                Console.WriteLine("═══════════════════════════════════════");
-                Console.WriteLine("             PROMASAJ!");
-                Console.WriteLine("═══════════════════════════════════════\n");
-                Console.WriteLine(p.poruka);
-                p = PrimiPoruku();
-                Console.WriteLine("Tablica gadjanja:");
-                Console.WriteLine(p.poruka);
-                Thread.Sleep(2000);
 
-                return false;
+                if (p.tipPoruke == TipPoruke.Pogodak)
+                {
+                    Console.WriteLine("═══════════════════════════════════════");
+                    Console.WriteLine("             POGODAK! ");
+                    Console.WriteLine("═══════════════════════════════════════\n");
+                    Console.WriteLine(p.poruka);
+                    Thread.Sleep(2000);
+
+                    if (p.poruka.Contains("0 brodova") || p.Napadnut.GetBrojPreostalihPodmornica() == 0)
+                        return false;
+
+                    return true;
+                }
+                else if (p.tipPoruke == TipPoruke.Promasaj)
+                {
+                    Console.WriteLine("═══════════════════════════════════════");
+                    Console.WriteLine("             PROMASAJ!");
+                    Console.WriteLine("═══════════════════════════════════════\n");
+                    Console.WriteLine(p.poruka);
+                    p = PrimiPoruku();
+                    Console.WriteLine(p.poruka);
+                    Thread.Sleep(2000);
+
+                    return false;
+                }
+                else if (p.tipPoruke == TipPoruke.Izgubio)
+                {
+                    Console.WriteLine("═══════════════════════════════════════");
+                    Console.WriteLine("             IZGUBIO SI! ");
+                    Console.WriteLine("═══════════════════════════════════════\n");
+                    Console.WriteLine(p.poruka);
+                    Console.WriteLine("\nSacekaj da ostali igraci zavrse partiju...");
+                    Thread.Sleep(2000);
+                    return false;
+                }
             }
-            else if (p.tipPoruke == TipPoruke.Izgubio)
+            else  //super potez, salje se 3x3 oko izabranog polja
             {
-                Console.WriteLine("═══════════════════════════════════════");
-                Console.WriteLine("             IZGUBIO SI! ");
-                Console.WriteLine("═══════════════════════════════════════\n");
-                Console.WriteLine(p.poruka);
-                Console.WriteLine("\nSacekaj da ostali igraci zavrse partiju...");
-                Thread.Sleep(2000);
-                return false;
+                List<int> polja = new List<int>();
+
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    for (int dy = -1; dy <= 1; dy++)
+                    {
+                        int nx = x + dx;
+                        int ny = y + dy;
+
+                        if (nx >= 1 && nx <= velTable && ny >= 1 && ny <= velTable)
+                        {
+                            int polje = (nx - 1) * velTable + ny;
+                            polja.Add(polje);
+                        }
+                    }
+                }
+
+                string superPoruka = "SUPER|" + string.Join(",", polja);
+                PosaljiPoruku(null, null, TipPoruke.Napad, superPoruka);
+
+                p = PrimiPoruku();
+
+                if (p.tipPoruke == TipPoruke.Pogodak)
+                {
+                    Console.WriteLine("═══════════════════════════════════════");
+                    Console.WriteLine("          SUPER POGODAK! ");
+                    Console.WriteLine("═══════════════════════════════════════\n");
+                    Console.WriteLine(p.poruka);
+                    Thread.Sleep(2000);
+
+                    if (p.poruka.Contains("0 brodova") || p.Napadnut.GetBrojPreostalihPodmornica() == 0)
+                        return false;
+
+                    return true;
+                }
+                else if (p.tipPoruke == TipPoruke.Promasaj)
+                {
+                    Console.WriteLine("═══════════════════════════════════════");
+                    Console.WriteLine("          SUPER PROMASAJ!");
+                    Console.WriteLine("═══════════════════════════════════════\n");
+                    Console.WriteLine(p.poruka);
+                    Thread.Sleep(2000);
+                    return false;
+                }
+                else if (p.tipPoruke == TipPoruke.Izgubio)
+                {
+                    Console.WriteLine("═══════════════════════════════════════");
+                    Console.WriteLine("             IZGUBIO SI! ");
+                    Console.WriteLine("═══════════════════════════════════════\n");
+                    Console.WriteLine(p.poruka);
+                    Console.WriteLine("\nSacekaj da ostali igraci zavrse partiju...");
+                    Thread.Sleep(2000);
+                    return false;
+                }
             }
 
             return false;
@@ -518,6 +552,7 @@ namespace Server
         {
             List<Podmornica> podmornice = new List<Podmornica>();
             HashSet<int> zauzetePozicije = new HashSet<int>();
+            superPotezIskoriscen = false;
 
             int[][] zadatak = new int[][]
             {

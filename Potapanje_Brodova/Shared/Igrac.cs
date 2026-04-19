@@ -211,6 +211,10 @@ namespace Shared
                         {
                             s = s + " x";  // Pogodak, ali nije potopljena
                         }
+                        else if (podmornica.Pozicije.Contains(pozicija))
+                        {
+                            s = s + " ■";  // Podmornica nije pogođena
+                        }
                         else
                         {
                             s = s + " -";  // Ostalo

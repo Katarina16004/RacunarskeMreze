@@ -347,12 +347,19 @@ namespace Server
                                 poljeProtivnika = CekajNaPotez(igracNaPotezu);
                             } while (string.IsNullOrEmpty(poljeProtivnika));
 
-                            polje = int.Parse(poljeProtivnika);
-                            krajPoteza = NapadniProtivnika(igracNaPotezu, imeProtivnika, polje);
+                            // provera da li je super potez pre parsiranja
+                            if (poljeProtivnika.StartsWith("SUPER|"))
+                            {
+                                krajPoteza = NapadniProtivnika(igracNaPotezu, imeProtivnika, poljeProtivnika);
+                            }
+                            else
+                            {
+                                polje = int.Parse(poljeProtivnika);
+                                krajPoteza = NapadniProtivnika(igracNaPotezu, imeProtivnika, polje);
+                            }
                         } while (rezultatGadjanja == 0);
 
                         if (!krajPoteza)
-
                         {
                             PosaljiTabluGadjanja(igracNaPotezu, napadnuti);
                             Console.WriteLine("Poslata tablica gadjanja: " + napadnuti.PrikaziMatricuGadjana());
@@ -615,14 +622,51 @@ namespace Server
             }
         }
 
-        private static bool NapadniProtivnika(Igrac trenutniIgrac, string imeProtivnika, int polje)
+        private static bool NapadniProtivnika(Igrac trenutniIgrac, string imeProtivnika, dynamic polje)
         {
             Poruka p = new Poruka();
             Igrac Protivnik = Igraci.Find(igrac => igrac.ime == imeProtivnika);
             bool krajPoteza = false;
             string poruka;
 
-            rezultatGadjanja = Protivnik.AzurirajMatricu(polje);
+            bool jeSuperPotez = polje is string && polje.ToString().StartsWith("SUPER|");
+            string poljeString = polje.ToString();
+
+            if (!jeSuperPotez)
+            {
+                int poljeInt = (int)(object)polje;
+                rezultatGadjanja = Protivnik.AzurirajMatricu(poljeInt);
+            }
+            else
+            {
+                // super potez
+                rezultatGadjanja = 0;
+                int brojPogodaka = 0;
+                int brojPotopljenih = 0;
+
+                string[] poljaSplit = poljeString.Split('|');
+                if (poljaSplit.Length == 2)
+                {
+                    string[] poljaBrojevi = poljaSplit[1].Split(',');
+                    foreach (string p_str in poljaBrojevi)
+                    {
+                        if (int.TryParse(p_str, out int trenutnoPolje))
+                        {
+                            int rezultat = Protivnik.AzurirajMatricu(trenutnoPolje);
+                            if (rezultat == 2) brojPogodaka++;
+                            if (rezultat == 3) brojPotopljenih++;
+                        }
+                    }
+                }
+
+                if (brojPotopljenih > 0)
+                    rezultatGadjanja = 3;
+                else if (brojPogodaka > 0)
+                    rezultatGadjanja = 2;
+                else
+                    rezultatGadjanja = 1;
+            }
+
             string info = "";
 
             switch (rezultatGadjanja)
@@ -633,7 +677,7 @@ namespace Server
                     p.tipPoruke = TipPoruke.Ponovi;
                     break;
                 case 1:
-                    poruka = "Promasaj!";
+                    poruka = jeSuperPotez ? "Super promasaj!" : "Promasaj!";
                     trenutniIgrac.brojPromasaja++;
                     info = $"\nBroj uzastopnih gresaka do sad je {trenutniIgrac.brojPromasaja}, maksimalan broj je: {MaxUzastopnihGresaka}\n";
                     p.tipPoruke = TipPoruke.Promasaj;
@@ -647,7 +691,7 @@ namespace Server
 
                 case 2:
                     trenutniIgrac.brojPromasaja = 0;
-                    poruka = "Pogodak!";
+                    poruka = jeSuperPotez ? "Super pogodak!" : "Pogodak!";
                     info = $"\nPreostalo podmornica protivniku je: {Protivnik.GetBrojPreostalihPodmornica()}\n";
                     p.tipPoruke = TipPoruke.Pogodak;
                     krajPoteza = Protivnik.DaLiSuSvePodmornicePotonjene() ? true : false;
@@ -655,17 +699,23 @@ namespace Server
 
                 case 3:
                     trenutniIgrac.brojPromasaja = 0;
-                    Podmornica potopljena = Protivnik.GetPodmornicaNaPoziciji(polje);
-                    string imePodmornice = potopljena != null ? $"({potopljena.GetDuzina()}x1)" : "";
-                    poruka = $"Potopljena podmornica! {imePodmornice}";
+
+                    string imePodmornice = "";
+                    if (!jeSuperPotez)
+                    {
+                        int poljeInt = (int)(object)polje;
+                        Podmornica potopljena = Protivnik.GetPodmornicaNaPoziciji(poljeInt);
+                        imePodmornice = potopljena != null ? $"({potopljena.GetDuzina()}x1)" : "";
+                    }
+
+                    poruka = jeSuperPotez ? $"Super pogodak! Potopljene podmornice!" : $"Potopljena podmornica! {imePodmornice}";
                     info = $"\nPreostalo podmornica protivniku je: {Protivnik.GetBrojPreostalihPodmornica()}\n";
                     p.tipPoruke = TipPoruke.Pogodak;
 
-                    if(Protivnik.DaLiSuSvePodmornicePotonjene())
+                    if (Protivnik.DaLiSuSvePodmornicePotonjene())
                     {
                         Protivnik.izgubio = true;
                         krajPoteza = true;
-
                     }
 
                     break;
@@ -690,8 +740,6 @@ namespace Server
             }
 
             ObavestiOstaleONapadu(trenutniIgrac, Protivnik, poruka);
-
-
 
             return krajPoteza;
         }
