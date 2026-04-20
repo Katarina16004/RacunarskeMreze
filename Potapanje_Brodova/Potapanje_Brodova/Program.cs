@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Server
 {
@@ -305,7 +306,6 @@ namespace Server
                 Igrac igracNaPotezu = Igraci[trenutniIgrac];
                 if (!igracNaPotezu.izgubio)
                 {
-
                     ObavestiIgraceONapadacu(igracNaPotezu);
 
                     if (krajPartije)
@@ -314,10 +314,25 @@ namespace Server
                         return;
                     }
 
-                    string imeProtivnika;
+                    // ODABIR PROTIVNIKA SA TIMEROM
+                    string imeProtivnika = null;
                     do
                     {
-                        imeProtivnika = CekajNaPotez(igracNaPotezu);
+                        try
+                        {
+                            imeProtivnika = TimerHelper.ExecuteWithTimeout(
+                                () => Task.FromResult(CekajNaPotez(igracNaPotezu)),
+                                10
+                            ).Result;
+                        }
+                        catch (TimeoutException)
+                        {
+                            imeProtivnika = BotHelper.IzaberiRandomIgraca(Igraci, igracNaPotezu);
+                            Console.WriteLine($"⏱️ Tajmer istekao! BOT je odabrao: {imeProtivnika}");
+                            Logger.LogIgrac(igracNaPotezu.ime, "BOT ODABIR", $"Protivnik: {imeProtivnika}");
+                            break;
+                        }
+
                         if (string.IsNullOrEmpty(imeProtivnika))
                             continue;
 
@@ -346,10 +361,24 @@ namespace Server
                         {
                             do
                             {
-                                poljeProtivnika = CekajNaPotez(igracNaPotezu);
+                                // ODABIR POLJA SA TIMEROM
+                                try
+                                {
+                                    poljeProtivnika = TimerHelper.ExecuteWithTimeout(
+                                        () => Task.FromResult(CekajNaPotez(igracNaPotezu)),
+                                        10
+                                    ).Result;
+                                }
+                                catch (TimeoutException)
+                                {
+                                    poljeProtivnika = BotHelper.IzaberiRandomPolje(VelicinaTable).ToString();
+                                    Console.WriteLine($"⏱️ Tajmer istekao! BOT igra polje: {poljeProtivnika}");
+                                    Logger.LogIgrac(igracNaPotezu.ime, "BOT POTEZ", $"Polje: {poljeProtivnika}");
+                                    break;
+                                }
+
                             } while (string.IsNullOrEmpty(poljeProtivnika));
 
-                            // provera da li je super potez pre parsiranja
                             if (poljeProtivnika.StartsWith("SUPER|"))
                             {
                                 krajPoteza = NapadniProtivnika(igracNaPotezu, imeProtivnika, poljeProtivnika);
@@ -371,7 +400,6 @@ namespace Server
                     Thread.Sleep(1000);
                 }
                 trenutniIgrac = (trenutniIgrac + 1) % Igraci.Count;
-                
 
             } while (!krajPartije);
         }
