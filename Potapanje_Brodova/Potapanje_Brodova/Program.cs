@@ -174,6 +174,7 @@ namespace Server
         private static void IncijalizujTable()
         {
             int brPodmornica = 10;
+            Logger.ZapocetaNovaIgra();
             string info = $"\nVelicina table: {VelicinaTable}\nBroj podmornica: {brPodmornica}\nMaksimalan broj uzastopnih gresaka: {MaxUzastopnihGresaka}";
 
             foreach (Socket clientSocket in clientSockets)
@@ -253,6 +254,7 @@ namespace Server
                                     }
                                     igrac.ime = ime;
                                     Console.WriteLine($"Podmornice od {ime} prihvaćene ({podmornice.Count}/10)");
+                                    Logger.LogPodmornice(ime, $"Postavljeno je {podmornice.Count} podmornica");
                                     brojPrimljenihPoruka++;
                                     break;
                                 }
@@ -426,6 +428,7 @@ namespace Server
         private static void ObjaviKrajPartije(Igrac pobednik)
         {
             krajPartije = true;
+            Logger.LogKrajPartije(pobednik.ime);
             string poruka = "Kraj partije! Igrac " + pobednik.ime + " je pobedio!";
             foreach (Igrac i in Igraci)
             {
@@ -675,16 +678,19 @@ namespace Server
                     poruka = "Vec napadnuto polje!";
                     info = $"\nPolje {polje} je vec gadjano. Izaberite drugo:";
                     p.tipPoruke = TipPoruke.Ponovi;
+                    Logger.LogPotez(trenutniIgrac.ime, imeProtivnika, polje.ToString(), poruka);
                     break;
                 case 1:
                     poruka = jeSuperPotez ? "Super promasaj!" : "Promasaj!";
                     trenutniIgrac.brojPromasaja++;
                     info = $"\nBroj uzastopnih gresaka do sad je {trenutniIgrac.brojPromasaja}, maksimalan broj je: {MaxUzastopnihGresaka}\n";
                     p.tipPoruke = TipPoruke.Promasaj;
+                    Logger.LogPotez(trenutniIgrac.ime, imeProtivnika, polje.ToString(), poruka);
                     if (trenutniIgrac.brojPromasaja == MaxUzastopnihGresaka)
                     {
                         p.tipPoruke = TipPoruke.Izgubio;
                         trenutniIgrac.izgubio = true;
+                        Logger.LogIgrac(trenutniIgrac.ime, "IZGUBIO", $"Maksimalan broj gresaka ({MaxUzastopnihGresaka})");
                     }
                     krajPoteza = true;
                     break;
@@ -694,6 +700,7 @@ namespace Server
                     poruka = jeSuperPotez ? "Super pogodak!" : "Pogodak!";
                     info = $"\nPreostalo podmornica protivniku je: {Protivnik.GetBrojPreostalihPodmornica()}\n";
                     p.tipPoruke = TipPoruke.Pogodak;
+                    Logger.LogPotez(trenutniIgrac.ime, imeProtivnika, polje.ToString(), poruka);
                     krajPoteza = Protivnik.DaLiSuSvePodmornicePotonjene() ? true : false;
                     break;
 
@@ -711,17 +718,20 @@ namespace Server
                     poruka = jeSuperPotez ? $"Super pogodak! Potopljene podmornice!" : $"Potopljena podmornica! {imePodmornice}";
                     info = $"\nPreostalo podmornica protivniku je: {Protivnik.GetBrojPreostalihPodmornica()}\n";
                     p.tipPoruke = TipPoruke.Pogodak;
+                    Logger.LogPotez(trenutniIgrac.ime, imeProtivnika, polje.ToString(), poruka);
 
                     if (Protivnik.DaLiSuSvePodmornicePotonjene())
                     {
                         Protivnik.izgubio = true;
                         krajPoteza = true;
+                        Logger.LogIgrac(imeProtivnika, "POTOPLJEN", $"Sve podmornice su potopljene");
                     }
 
                     break;
 
                 default:
                     poruka = "Greska!";
+                    Logger.LogGreska("NapadniProtivnika", new Exception($"Nepoznat rezultat: {rezultatGadjanja}"));
                     break;
             }
 
