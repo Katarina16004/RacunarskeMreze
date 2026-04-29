@@ -13,6 +13,7 @@ namespace Shared
         public int id { get; }
         public string ime { get; set; }
         public int brojPromasaja { get; set; }
+        public int botTimeoutCount { get; set; }
         public List<Podmornica> podmornice { get; set; } = new List<Podmornica>();
         public int[,] matrica { get; set; }
         public int[,] matricaGadjana { get; set; }
@@ -27,6 +28,7 @@ namespace Shared
             this.socket = socket;
             this.id = id;
             brojPromasaja = 0;
+            botTimeoutCount = 0;
             podmornice = new List<Podmornica>();
             matrica = new int[dimenzija, dimenzija];
             matricaGadjana = new int[dimenzija, dimenzija];
@@ -40,6 +42,7 @@ namespace Shared
             this.id = original.id;
             this.ime = original.ime;
             this.brojPromasaja = original.brojPromasaja;
+            this.botTimeoutCount = original.botTimeoutCount;
             this.podmornice = new List<Podmornica>(original.podmornice);
 
             int dimX = original.matrica.GetLength(0);
@@ -207,7 +210,7 @@ namespace Shared
                         {
                             s = s + " x";  // Potopljena
                         }
-                        else if(podmornica.Pozicije.Contains(pozicija) && podmornica.PogodjenePozicije.Contains(pozicija))
+                        else if (podmornica.Pozicije.Contains(pozicija) && podmornica.PogodjenePozicije.Contains(pozicija))
                         {
                             s = s + " x";  // Pogodak, ali nije potopljena
                         }
@@ -266,6 +269,7 @@ namespace Shared
         public void ResetujIgraca()
         {
             brojPromasaja = 0;
+            botTimeoutCount = 0;
             ResetujPodmornice();
             for (int i = 0; i < matrica.GetLength(0); i++)
             {

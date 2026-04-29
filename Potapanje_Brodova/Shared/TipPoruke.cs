@@ -1,9 +1,7 @@
 ﻿using System;
 
-
 namespace Shared
 {
-
     [Serializable]
     public enum TipPoruke
     {
@@ -20,7 +18,8 @@ namespace Shared
         Ponovi,
         NovaPartija,
         Kraj,
-        Ostalo
-
+        Ostalo,
+        TajmerOdbrojavanje,
+        BotIgra
     }
 }
