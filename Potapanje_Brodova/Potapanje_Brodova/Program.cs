@@ -4,9 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.ConstrainedExecution;
+using System.Security.Policy;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 
 namespace Server
 {
@@ -310,6 +313,7 @@ namespace Server
 
                     if (krajPartije)
                     {
+                        Thread.Sleep(2000);
                         GlasanjeNovaIgra();
                         return;
                     }
@@ -318,6 +322,7 @@ namespace Server
                     string imeProtivnika = null;
                     bool protivnikOdabran = false;
                     bool igracIzabraoProtivnika = false;
+                    bool botOdigraoPolje = false;
 
                     do
                     {
@@ -356,6 +361,7 @@ namespace Server
                                 {
                                     Poruka upozorenjePoruka = new Poruka(null, null, TipPoruke.Obavestenje, upozorenje);
                                     igracNaPotezu.socket.Send(upozorenjePoruka.Serializuj());
+                                    Console.WriteLine("Prvo upozorenje na biranju protivnika: " + upozorenje);
                                 }
                                 catch { }
 
@@ -378,6 +384,7 @@ namespace Server
                                 {
                                     Poruka upozorenjePoruka = new Poruka(null, null, TipPoruke.Obavestenje, upozorenje);
                                     igracNaPotezu.socket.Send(upozorenjePoruka.Serializuj());
+                                    Console.WriteLine("Drugo upozorenje na biranju protivnika: " + upozorenje);
                                 }
                                 catch { }
 
@@ -394,14 +401,6 @@ namespace Server
                                 // Treci BOT timeout - igrac je eliminisan
                                 igracNaPotezu.izgubio = true;
                                 Logger.LogIgrac(igracNaPotezu.ime, "ELIMINISAN/A", "Tri puta isteklo vreme!");
-
-                                try
-                                {
-                                    Poruka eliminacijaPoruka = new Poruka(null, null, TipPoruke.Izgubio,
-                                        "Eliminisani ste jer vam je tajmer tri puta istekao!");
-                                    igracNaPotezu.socket.Send(eliminacijaPoruka.Serializuj());
-                                }
-                                catch { }
 
                                 protivnikOdabran = true;
                             }
@@ -470,10 +469,11 @@ namespace Server
                                 catch (TimeoutException)
                                 {
                                     igracNaPotezu.botTimeoutCount++;
-
+                                    botOdigraoPolje = true;
                                     if (igracNaPotezu.botTimeoutCount == 1)
                                     {
                                         // Prvo BOT igranje - upozorenje
+                                       
                                         string upozorenje = $"UPOZORENJE: {igracNaPotezu.ime}!\nBOT je odigrao potez, imaš još 2 šanse!";
                                         Console.WriteLine(upozorenje);
                                         Logger.LogIgrac(igracNaPotezu.ime, "BOT UPOZORENJE", "Tajmer istekao pri izboru polja");
@@ -482,6 +482,7 @@ namespace Server
                                         {
                                             Poruka upozorenjePoruka = new Poruka(null, null, TipPoruke.Obavestenje, upozorenje);
                                             igracNaPotezu.socket.Send(upozorenjePoruka.Serializuj());
+                                            Console.WriteLine("Prvo upozorenje na polju: " + upozorenje);
                                         }
                                         catch { }
 
@@ -501,6 +502,7 @@ namespace Server
                                         {
                                             Poruka upozorenjePoruka = new Poruka(null, null, TipPoruke.Obavestenje, upozorenje);
                                             igracNaPotezu.socket.Send(upozorenjePoruka.Serializuj());
+                                            Console.WriteLine("Drugo upozorenje na polju: " + upozorenje);
                                         }
                                         catch { }
 
@@ -514,14 +516,6 @@ namespace Server
                                         igracNaPotezu.izgubio = true;
                                         Logger.LogIgrac(igracNaPotezu.ime, "ELIMINISAN/A", "Tri puta isteklo vrijeme pri izboru polja!");
 
-                                        try
-                                        {
-                                            Poruka eliminacijaPoruka = new Poruka(null, null, TipPoruke.Izgubio,
-                                                "Eliminisani ste jer vam je tajmer tri puta istekao!");
-                                            igracNaPotezu.socket.Send(eliminacijaPoruka.Serializuj());
-                                        }
-                                        catch { }
-
                                         poljeProtivnika = null;
                                         break;
                                     }
@@ -532,7 +526,6 @@ namespace Server
                             // Ako je igrac eliminisan pri izboru polja
                             if (igracNaPotezu.izgubio)
                             {
-                                ObavestiOstaleOElim(igracNaPotezu);
                                 krajPoteza = true;
                                 break;
                             }
@@ -551,6 +544,10 @@ namespace Server
                                 krajPoteza = NapadniProtivnika(igracNaPotezu, imeProtivnika, polje);
                             }
                             else
+                            {
+                                krajPoteza = true;
+                            }
+                            if(botOdigraoPolje)
                             {
                                 krajPoteza = true;
                             }
@@ -583,13 +580,18 @@ namespace Server
             {
                 if (i != eliminisan && !i.izgubio)
                 {
-                    try
+                    if (eliminisan.botTimeoutCount >= 3)
                     {
-                        Poruka p = new Poruka(null, null, TipPoruke.Obavestenje,
-                            $"⚠️ {eliminisan.ime} je eliminisan/a zbog isteka vremena!");
-                        i.socket.Send(p.Serializuj());
+                        try
+                        {
+                            Poruka p = new Poruka(null, null, TipPoruke.Obavestenje,
+                                $" {eliminisan.ime} je eliminisan/a zbog isteka vremena!");
+                            i.socket.Send(p.Serializuj());
+                            Console.WriteLine($"Poruka poslata igracu {i.ime}: {p.poruka}");
+                        }
+                        catch { }
                     }
-                    catch { }
+                    
                 }
             }
         }

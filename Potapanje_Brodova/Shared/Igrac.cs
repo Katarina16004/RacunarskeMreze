@@ -13,7 +13,7 @@ namespace Shared
         public int id { get; }
         public string ime { get; set; }
         public int brojPromasaja { get; set; }
-        public int botTimeoutCount { get; set; }
+        public int botTimeoutCount { get; set; } = 0;
         public List<Podmornica> podmornice { get; set; } = new List<Podmornica>();
         public int[,] matrica { get; set; }
         public int[,] matricaGadjana { get; set; }

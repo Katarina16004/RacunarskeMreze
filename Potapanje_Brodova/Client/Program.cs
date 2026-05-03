@@ -216,7 +216,7 @@ namespace Server
                         Console.WriteLine("═══════════════════════════════════════");
                         Console.WriteLine("             KRAJ PARTIJE");
                         Console.WriteLine("═══════════════════════════════════════\n");
-                        if(p.poruka.Contains(ime))
+                        if (p.poruka.Contains(ime))
                             Console.WriteLine("\tTI SI POBEDNIK!\n");
                         else
                             Console.WriteLine(p.poruka);
@@ -239,23 +239,26 @@ namespace Server
                             }
                         }
 
-                        string napadnuti = "";
-                        while (true)
+                        string napadnuti = OdaberiProtivnikaSaTimeoutom(linije, dostupniIgraci);
+                        if (string.IsNullOrEmpty(napadnuti))
                         {
-                            Console.WriteLine("═══════════════════════════════════════");
-                            Console.WriteLine("           ODABIR PROTIVNIKA ");
-                            Console.WriteLine("═══════════════════════════════════════\n");
-                            Console.WriteLine(linije[0]);
-                            for (int i = 0; i < dostupniIgraci.Count; i++)
+                            // Timeout - BOT je odigrao
+                            p = PrimiPoruku();
+                            if (p.tipPoruke == TipPoruke.GlasanjeNova)
                             {
-                                Console.WriteLine($"  {i + 1}. {dostupniIgraci[i]}");
+
+                                Console.WriteLine("\nIzgubio si partiju eliminacijom!");
+                                Console.WriteLine("═══════════════════════════════════════");
+                                Console.WriteLine("             KRAJ PARTIJE");
+                                Console.WriteLine("═══════════════════════════════════════\n");
+                                Console.WriteLine(p.poruka);
+                                Console.WriteLine("═══════════════════════════════════════");
+                                Console.WriteLine("              GLASANJE");
+                                Console.WriteLine("═══════════════════════════════════════\n");
+                                GlasajNovaPartija();
                             }
-                            Console.Write("\nUnesite ime protivnika: ");
-                            napadnuti = Console.ReadLine();
-                            if (dostupniIgraci.Contains(napadnuti))
-                                break;
-                            else
-                                Console.WriteLine("Nepostojece ime. Pokusajte ponovo.");
+                            Console.WriteLine($"Poruka nakon BOT poteza: {p.poruka} , Tip: {p.tipPoruke}");
+                            continue;
                         }
 
                         PosaljiPoruku(null, null, TipPoruke.Ostalo, napadnuti);
@@ -289,6 +292,110 @@ namespace Server
                 Console.WriteLine($"Greska u konekciji! {e}");
                 ZatvoriTCPKonenciju();
             }
+        }
+
+        private static string OdaberiProtivnikaSaTimeoutom(string[] linije, List<string> dostupniIgraci)
+        {
+            DateTime startTime = DateTime.Now;
+            int timeout = 10000; // 10 sekundi
+            string napadnuti = "";
+
+            while ((DateTime.Now - startTime).TotalMilliseconds < timeout)
+            {
+                // Proveri da li je stigla poruka od servera (BOT je odigrao)
+                if (DaLiJePristiglaPortuka())
+                {
+                    Console.WriteLine("\n[BOT JE ODIGRAO - TIMEOUT!]");
+                    return "";
+                }
+
+                Console.WriteLine("═══════════════════════════════════════");
+                Console.WriteLine("           ODABIR PROTIVNIKA ");
+                Console.WriteLine("═══════════════════════════════════════\n");
+                Console.WriteLine(linije[0]);
+                for (int i = 0; i < dostupniIgraci.Count; i++)
+                {
+                    Console.WriteLine($"  {i + 1}. {dostupniIgraci[i]}");
+                }
+
+                long preostaloVremena = timeout - (long)(DateTime.Now - startTime).TotalMilliseconds;
+                Console.Write("Unesite ime protivnika: ");
+
+                napadnuti = UcitajSaTimeoutomAlt((int)(preostaloVremena / 1000));
+
+                if (string.IsNullOrEmpty(napadnuti))
+                {
+                    Console.WriteLine("\n[TIMEOUT - BOT ĆE IGRATI!]");
+                    return "";
+                }
+
+                if (dostupniIgraci.Contains(napadnuti))
+                {
+                    return napadnuti;
+                }
+                else
+                {
+                    Console.WriteLine("Nepostojece ime. Pokusajte ponovo.");
+                    Console.Clear();
+                }
+            }
+
+            return "";
+        }
+
+        private static bool DaLiJePristiglaPortuka()
+        {
+            clientSocket.Blocking = false;
+            byte[] buffer = new byte[40806];
+
+            try
+            {
+                int bytesRead = clientSocket.Receive(buffer, 0, buffer.Length, SocketFlags.Peek);
+                return bytesRead > 0;
+            }
+            catch (SocketException)
+            {
+                return false;
+            }
+            finally
+            {
+                clientSocket.Blocking = true;
+            }
+        }
+
+        private static string UcitajSaTimeoutomAlt(int sekundi)
+        {
+            DateTime startTime = DateTime.Now;
+            string input = "";
+
+            while ((DateTime.Now - startTime).TotalSeconds < sekundi)
+            {
+                if (Console.KeyAvailable)
+                {
+                    ConsoleKeyInfo key = Console.ReadKey(true);
+                    if (key.Key == ConsoleKey.Enter)
+                    {
+                        return input;
+                    }
+                    else if (key.Key == ConsoleKey.Backspace)
+                    {
+                        if (input.Length > 0)
+                        {
+                            input = input.Substring(0, input.Length - 1);
+                            Console.Write("\b \b");
+                        }
+                    }
+                    else if (!char.IsControl(key.KeyChar))
+                    {
+                        input += key.KeyChar;
+                        Console.Write(key.KeyChar);
+                    }
+                }
+                Thread.Sleep(50);
+            }
+
+            Console.WriteLine();
+            return "";
         }
 
         private static void Odbrana(Igrac i, string poruka)
@@ -365,7 +472,13 @@ namespace Server
                 do
                 {
                     Console.Write("Vas izbor (1 ili 2): ");
-                    int.TryParse(Console.ReadLine(), out izbor);
+                    string unosIzbor = UcitajSaTimeoutomAlt(10);
+                    if (string.IsNullOrEmpty(unosIzbor))
+                    {
+                        Console.WriteLine("\n[TIMEOUT - BOT ĆE IGRATI!]");
+                        return false; // BOT je odigrao - sledeci igrac dobija potez
+                    }
+                    int.TryParse(unosIzbor, out izbor);
                 } while (izbor != 1 && izbor != 2);
 
                 if (izbor == 2)
@@ -379,8 +492,22 @@ namespace Server
 
             while (true)
             {
+                // Provjeri da li je stigla poruka od servera (BOT je odigrao)
+                if (DaLiJePristiglaPortuka())
+                {
+                    Console.WriteLine("\n[BOT JE ODIGRAO - TIMEOUT!]");
+                    return false; // BOT je odigrao - sledeci igrac dobija potez
+                }
+
                 Console.Write($"\nUnesite X,Y (1-{velTable}): ");
-                string unos = Console.ReadLine();
+                string unos = UcitajSaTimeoutomAlt(10);
+
+                if (string.IsNullOrEmpty(unos))
+                {
+                    Console.WriteLine("\n[TIMEOUT - BOT ĆE IGRATI!]");
+                    return false; // BOT je odigrao - sledeci igrac dobija potez
+                }
+
                 string[] delovi = unos.Split(',');
 
                 if (delovi.Length != 2)
@@ -428,7 +555,7 @@ namespace Server
                     if (p.poruka.Contains("0 brodova") || p.Napadnut.GetBrojPreostalihPodmornica() == 0)
                         return false;
 
-                    return true;
+                    return true; // Korisnik je pogodio - nastavlja sa sledećim potezom
                 }
                 else if (p.tipPoruke == TipPoruke.Promasaj)
                 {
@@ -436,11 +563,9 @@ namespace Server
                     Console.WriteLine("             PROMASAJ!");
                     Console.WriteLine("═══════════════════════════════════════\n");
                     Console.WriteLine(p.poruka);
-                    p = PrimiPoruku();
-                    Console.WriteLine(p.poruka);
                     Thread.Sleep(2000);
 
-                    return false;
+                    return false; // Korisnik je promašio - sledeci igrac dobija potez
                 }
                 else if (p.tipPoruke == TipPoruke.Izgubio)
                 {
@@ -450,7 +575,7 @@ namespace Server
                     Console.WriteLine(p.poruka);
                     Console.WriteLine("\nSacekaj da ostali igraci zavrse partiju...");
                     Thread.Sleep(2000);
-                    return false;
+                    return false; // Eliminisan - sledeci igrac dobija potez
                 }
             }
             else  //super potez, salje se 3x3 oko izabranog polja
@@ -488,7 +613,7 @@ namespace Server
                     if (p.poruka.Contains("0 brodova") || p.Napadnut.GetBrojPreostalihPodmornica() == 0)
                         return false;
 
-                    return true;
+                    return true; // Korisnik je pogodio - nastavlja sa sledećim potezom
                 }
                 else if (p.tipPoruke == TipPoruke.Promasaj)
                 {
@@ -497,7 +622,7 @@ namespace Server
                     Console.WriteLine("═══════════════════════════════════════\n");
                     Console.WriteLine(p.poruka);
                     Thread.Sleep(2000);
-                    return false;
+                    return false; // Korisnik je promašio - sledeci igrac dobija potez
                 }
                 else if (p.tipPoruke == TipPoruke.Izgubio)
                 {
@@ -507,7 +632,7 @@ namespace Server
                     Console.WriteLine(p.poruka);
                     Console.WriteLine("\nSacekaj da ostali igraci zavrse partiju...");
                     Thread.Sleep(2000);
-                    return false;
+                    return false; // Eliminisan - sledeci igrac dobija potez
                 }
             }
 
