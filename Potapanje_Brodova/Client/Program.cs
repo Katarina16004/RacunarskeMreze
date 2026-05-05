@@ -18,6 +18,8 @@ namespace Server
         public static bool PrvaPartija = true;
         public static int MaxUzastopnihGresaka = 0;
         private static bool superPotezIskoriscen = false;
+        private static int sekundeCekanjaNaUnos = 14;
+        private static int timeoutMs => sekundeCekanjaNaUnos * 1000;
 
         static void Main(string[] args)
         {
@@ -206,7 +208,6 @@ namespace Server
                 {
                     Thread.Sleep(1000);
                     Poruka p = PrimiPoruku();
-                    Console.WriteLine($"Poruka: {p.poruka} , Tip: {p.tipPoruke}");
 
                     if (p == null || p.poruka == null)
                         continue;
@@ -297,12 +298,12 @@ namespace Server
         private static string OdaberiProtivnikaSaTimeoutom(string[] linije, List<string> dostupniIgraci)
         {
             DateTime startTime = DateTime.Now;
-            int timeout = 10000; // 10 sekundi
+            int timeout = timeoutMs;
             string napadnuti = "";
 
             while ((DateTime.Now - startTime).TotalMilliseconds < timeout)
             {
-                // Proveri da li je stigla poruka od servera (BOT je odigrao)
+                // Provera da li je stigla poruka od servera (BOT je odigrao)
                 if (DaLiJePristiglaPortuka())
                 {
                     Console.WriteLine("\n[BOT JE ODIGRAO - TIMEOUT!]");
@@ -472,7 +473,7 @@ namespace Server
                 do
                 {
                     Console.Write("Vas izbor (1 ili 2): ");
-                    string unosIzbor = UcitajSaTimeoutomAlt(10);
+                    string unosIzbor = UcitajSaTimeoutomAlt(sekundeCekanjaNaUnos);
                     if (string.IsNullOrEmpty(unosIzbor))
                     {
                         Console.WriteLine("\n[TIMEOUT - BOT ĆE IGRATI!]");
@@ -490,9 +491,10 @@ namespace Server
 
             int x, y;
 
+        UNOSPOLJA:
             while (true)
             {
-                // Provjeri da li je stigla poruka od servera (BOT je odigrao)
+                // Provera da li je stigla poruka od servera (BOT je odigrao)
                 if (DaLiJePristiglaPortuka())
                 {
                     Console.WriteLine("\n[BOT JE ODIGRAO - TIMEOUT!]");
@@ -500,7 +502,7 @@ namespace Server
                 }
 
                 Console.Write($"\nUnesite X,Y (1-{velTable}): ");
-                string unos = UcitajSaTimeoutomAlt(10);
+                string unos = UcitajSaTimeoutomAlt(sekundeCekanjaNaUnos);
 
                 if (string.IsNullOrEmpty(unos))
                 {
@@ -531,6 +533,7 @@ namespace Server
                 break;
             }
 
+
             if (!koristiSuperPotez) //obican potez, salje se samo jedno polje
             {
                 int polje = (x - 1) * velTable + y;
@@ -541,12 +544,12 @@ namespace Server
                 if (p.tipPoruke == TipPoruke.Ponovi)
                 {
                     Console.WriteLine("Polje je već gadjano. Pokušajte ponovo.");
-                    return false;
+                    goto UNOSPOLJA;
                 }
 
                 if (p.tipPoruke == TipPoruke.Pogodak)
                 {
-                    Console.WriteLine("═══════════════════════════════════════");
+                    Console.WriteLine("\n═══════════════════════════════════════");
                     Console.WriteLine("             POGODAK! ");
                     Console.WriteLine("═══════════════════════════════════════\n");
                     Console.WriteLine(p.poruka);
@@ -555,21 +558,21 @@ namespace Server
                     if (p.poruka.Contains("0 brodova") || p.Napadnut.GetBrojPreostalihPodmornica() == 0)
                         return false;
 
-                    return true; // Korisnik je pogodio - nastavlja sa sledećim potezom
+                    return true; // Korisnik je pogodio - nastavlja sa sledecim potezom
                 }
                 else if (p.tipPoruke == TipPoruke.Promasaj)
                 {
-                    Console.WriteLine("═══════════════════════════════════════");
+                    Console.WriteLine("\n═══════════════════════════════════════");
                     Console.WriteLine("             PROMASAJ!");
                     Console.WriteLine("═══════════════════════════════════════\n");
                     Console.WriteLine(p.poruka);
                     Thread.Sleep(2000);
 
-                    return false; // Korisnik je promašio - sledeci igrac dobija potez
+                    return false; // Korisnik je promasio - sledeci igrac dobija potez
                 }
                 else if (p.tipPoruke == TipPoruke.Izgubio)
                 {
-                    Console.WriteLine("═══════════════════════════════════════");
+                    Console.WriteLine("\n═══════════════════════════════════════");
                     Console.WriteLine("             IZGUBIO SI! ");
                     Console.WriteLine("═══════════════════════════════════════\n");
                     Console.WriteLine(p.poruka);
@@ -604,7 +607,7 @@ namespace Server
 
                 if (p.tipPoruke == TipPoruke.Pogodak)
                 {
-                    Console.WriteLine("═══════════════════════════════════════");
+                    Console.WriteLine("\n═══════════════════════════════════════");
                     Console.WriteLine("          SUPER POGODAK! ");
                     Console.WriteLine("═══════════════════════════════════════\n");
                     Console.WriteLine(p.poruka);
@@ -613,20 +616,20 @@ namespace Server
                     if (p.poruka.Contains("0 brodova") || p.Napadnut.GetBrojPreostalihPodmornica() == 0)
                         return false;
 
-                    return true; // Korisnik je pogodio - nastavlja sa sledećim potezom
+                    return true; // Korisnik je pogodio - nastavlja sa sledecim potezom
                 }
                 else if (p.tipPoruke == TipPoruke.Promasaj)
                 {
-                    Console.WriteLine("═══════════════════════════════════════");
+                    Console.WriteLine("\n═══════════════════════════════════════");
                     Console.WriteLine("          SUPER PROMASAJ!");
                     Console.WriteLine("═══════════════════════════════════════\n");
                     Console.WriteLine(p.poruka);
                     Thread.Sleep(2000);
-                    return false; // Korisnik je promašio - sledeci igrac dobija potez
+                    return false; // Korisnik je promasio - sledeci igrac dobija potez
                 }
                 else if (p.tipPoruke == TipPoruke.Izgubio)
                 {
-                    Console.WriteLine("═══════════════════════════════════════");
+                    Console.WriteLine("\n═══════════════════════════════════════");
                     Console.WriteLine("             IZGUBIO SI! ");
                     Console.WriteLine("═══════════════════════════════════════\n");
                     Console.WriteLine(p.poruka);

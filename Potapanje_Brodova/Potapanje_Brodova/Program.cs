@@ -29,16 +29,17 @@ namespace Server
         private static bool NovaIgra = true;
         private static bool krajPartije = false;
         private static int rezultatGadjanja;
+        private static int sekundeCekanjaNaUnos = 14;
 
         static void Main(string[] args)
         {
             Console.WriteLine("Dobrodosli na server!");
             do
             {
-                Console.WriteLine("Unesite broj igraca koji ce da igraju:");
+                Console.WriteLine("Unesite broj igraca koji ce da igraju (min 2):");
                 int.TryParse(Console.ReadLine(), out MaxBrojIgraca);
             }
-            while (MaxBrojIgraca < 1);
+            while (MaxBrojIgraca <= 1);
 
             Console.WriteLine("Cekam prijave Igraca...");
 
@@ -143,7 +144,7 @@ namespace Server
             {
                 Console.WriteLine("Unesite maksimalan broj uzastopnih gresaka:");
                 int.TryParse((string)Console.ReadLine(), out MaxUzastopnihGresaka);
-            } while (MaxUzastopnihGresaka > VelicinaTable * VelicinaTable - 1);
+            } while (MaxUzastopnihGresaka > VelicinaTable * VelicinaTable - 1 || MaxUzastopnihGresaka < 1);
         }
 
         private static void UspostaviTCPKonekciju()
@@ -328,7 +329,7 @@ namespace Server
                     {
                         try
                         {
-                            imeProtivnika = CekajNaPotezSaTimeoutom(igracNaPotezu, 10);
+                            imeProtivnika = CekajNaPotezSaTimeoutom(igracNaPotezu, sekundeCekanjaNaUnos);
 
                             if (string.IsNullOrEmpty(imeProtivnika))
                                 continue;
@@ -349,19 +350,19 @@ namespace Server
                         catch (TimeoutException)
                         {
                             igracNaPotezu.botTimeoutCount++;
+                            Console.WriteLine($"\nTAJMER ISTEKAO\nPoruka poslata klijentu: {igracNaPotezu.ime}");
 
                             if (igracNaPotezu.botTimeoutCount == 1)
                             {
                                 // Prvo BOT igranje - upozorenje
                                 string upozorenje = $"UPOZORENJE: {igracNaPotezu.ime}!\nBOT je odigrao potez, imaš još 2 šanse!";
-                                Console.WriteLine(upozorenje);
                                 Logger.LogIgrac(igracNaPotezu.ime, "BOT OBAVEŠTENJE", "Tajmer istekao - BOT je odigrao prvi put");
 
                                 try
                                 {
                                     Poruka upozorenjePoruka = new Poruka(null, null, TipPoruke.Obavestenje, upozorenje);
                                     igracNaPotezu.socket.Send(upozorenjePoruka.Serializuj());
-                                    Console.WriteLine("Prvo upozorenje na biranju protivnika: " + upozorenje);
+                                    Console.WriteLine("Prvo upozorenje na biranju protivnika: \n" + upozorenje);
                                 }
                                 catch { }
 
@@ -375,16 +376,15 @@ namespace Server
                             }
                             else if (igracNaPotezu.botTimeoutCount == 2)
                             {
-                                // Drugo BOT igranje - novi protivnik
+                                // Drugo BOT igranje - novo upozorenje
                                 string upozorenje = $"UPOZORENJE: {igracNaPotezu.ime}!\nNa sledećem isteku vremena biće eliminisan/a!";
-                                Console.WriteLine(upozorenje);
                                 Logger.LogIgrac(igracNaPotezu.ime, "BOT UPOZORENJE", "Tajmer istekao drugi put - sledeće je kraj!");
 
                                 try
                                 {
                                     Poruka upozorenjePoruka = new Poruka(null, null, TipPoruke.Obavestenje, upozorenje);
                                     igracNaPotezu.socket.Send(upozorenjePoruka.Serializuj());
-                                    Console.WriteLine("Drugo upozorenje na biranju protivnika: " + upozorenje);
+                                    Console.WriteLine("Drugo upozorenje na biranju protivnika: \n" + upozorenje);
                                 }
                                 catch { }
 
@@ -400,6 +400,7 @@ namespace Server
                             {
                                 // Treci BOT timeout - igrac je eliminisan
                                 igracNaPotezu.izgubio = true;
+                                Console.WriteLine($"Eliminisan igrac {igracNaPotezu.ime}");
                                 Logger.LogIgrac(igracNaPotezu.ime, "ELIMINISAN/A", "Tri puta isteklo vreme!");
 
                                 protivnikOdabran = true;
@@ -436,12 +437,10 @@ namespace Server
                     // Ako je BOT odabrao protivnika, BOT mora odmah odigrati i polje
                     if (igracIzabraoProtivnika == false)
                     {
-                        // BOT je odabrao protivnika - ODMAH ODIGRAJ POLJE
                         int randomPolje = BotHelper.IzaberiRandomPolje(VelicinaTable);
-                        Console.WriteLine($"BOT je odigrao polje: {randomPolje}");
+                        Console.WriteLine($"BOT je odigrao polje: {randomPolje}\n");
                         Logger.LogIgrac(igracNaPotezu.ime, "BOT POTEZ POLJE", $"Polje: {randomPolje}");
 
-                        // Izvrši napad
                         NapadniProtivnika(igracNaPotezu, imeProtivnika, randomPolje);
                         
                         trenutniIgrac = (trenutniIgrac + 1) % Igraci.Count;
@@ -449,7 +448,8 @@ namespace Server
                         continue;
                     }
 
-                    // NORMALAN POTEZ - IGRAC JE SAM IZABRAO PROTIVNIKA
+
+                    // ODABIR POLJA SA TAJMEROM - IGRAC JE SAM IZABRAO PROTIVNIKA
                     int polje = -1;
                     string poljeProtivnika = "";
                     bool krajPoteza = false;
@@ -461,59 +461,57 @@ namespace Server
                         {
                             do
                             {
-                                // ODABIR POLJA SA TIMEROM
                                 try
                                 {
-                                    poljeProtivnika = CekajNaPotezSaTimeoutom(igracNaPotezu, 10);
+                                    poljeProtivnika = CekajNaPotezSaTimeoutom(igracNaPotezu, sekundeCekanjaNaUnos);
                                 }
                                 catch (TimeoutException)
                                 {
                                     igracNaPotezu.botTimeoutCount++;
+                                    Console.WriteLine($"\nTAJMER ISTEKAO\nPoruka poslata klijentu: {igracNaPotezu.ime}");
                                     botOdigraoPolje = true;
                                     if (igracNaPotezu.botTimeoutCount == 1)
                                     {
                                         // Prvo BOT igranje - upozorenje
-                                       
                                         string upozorenje = $"UPOZORENJE: {igracNaPotezu.ime}!\nBOT je odigrao potez, imaš još 2 šanse!";
-                                        Console.WriteLine(upozorenje);
                                         Logger.LogIgrac(igracNaPotezu.ime, "BOT UPOZORENJE", "Tajmer istekao pri izboru polja");
 
                                         try
                                         {
                                             Poruka upozorenjePoruka = new Poruka(null, null, TipPoruke.Obavestenje, upozorenje);
                                             igracNaPotezu.socket.Send(upozorenjePoruka.Serializuj());
-                                            Console.WriteLine("Prvo upozorenje na polju: " + upozorenje);
+                                            Console.WriteLine("Prvo upozorenje na odabiru polja: \n" + upozorenje);
                                         }
                                         catch { }
 
                                         poljeProtivnika = BotHelper.IzaberiRandomPolje(VelicinaTable).ToString();
-                                        Console.WriteLine($"BOT je odigrao polje: {poljeProtivnika}");
+                                        Console.WriteLine($"BOT je odigrao polje: {poljeProtivnika}\n");
                                         Logger.LogIgrac(igracNaPotezu.ime, "BOT POTEZ", $"Polje: {poljeProtivnika}");
                                         break;
                                     }
                                     else if (igracNaPotezu.botTimeoutCount == 2)
                                     {
-                                        // Drugo BOT igranje - novo polje
+                                        // Drugo BOT igranje - novo upozorenje
                                         string upozorenje = $"UPOZORENJE: {igracNaPotezu.ime}!\nNa sledećem isteku vremena biće eliminisan/a!";
-                                        Console.WriteLine(upozorenje);
                                         Logger.LogIgrac(igracNaPotezu.ime, "BOT UPOZORENJE", "Tajmer istekao drugi put pri izboru polja!");
 
                                         try
                                         {
                                             Poruka upozorenjePoruka = new Poruka(null, null, TipPoruke.Obavestenje, upozorenje);
                                             igracNaPotezu.socket.Send(upozorenjePoruka.Serializuj());
-                                            Console.WriteLine("Drugo upozorenje na polju: " + upozorenje);
+                                            Console.WriteLine("Drugo upozorenje na odabiru polja: \n" + upozorenje);
                                         }
                                         catch { }
 
                                         poljeProtivnika = BotHelper.IzaberiRandomPolje(VelicinaTable).ToString();
-                                        Console.WriteLine($"BOT je odigrao polje: {poljeProtivnika}");
+                                        Console.WriteLine($"BOT je odigrao polje: {poljeProtivnika}\n");
                                         Logger.LogIgrac(igracNaPotezu.ime, "BOT POTEZ", $"Novo polje: {poljeProtivnika}");
                                         break;
                                     }
                                     else if (igracNaPotezu.botTimeoutCount >= 3)
                                     {
                                         igracNaPotezu.izgubio = true;
+                                        Console.WriteLine($"Eliminisan igrac {igracNaPotezu.ime}");
                                         Logger.LogIgrac(igracNaPotezu.ime, "ELIMINISAN/A", "Tri puta isteklo vrijeme pri izboru polja!");
 
                                         poljeProtivnika = null;
@@ -529,7 +527,8 @@ namespace Server
                                 krajPoteza = true;
                                 break;
                             }
-
+                            
+                            //IGRAC IGRA CEO POTEZ
                             if (poljeProtivnika != null && poljeProtivnika.StartsWith("SUPER|"))
                             {
                                 krajPoteza = NapadniProtivnika(igracNaPotezu, imeProtivnika, poljeProtivnika);
@@ -547,6 +546,7 @@ namespace Server
                             {
                                 krajPoteza = true;
                             }
+
                             if(botOdigraoPolje)
                             {
                                 krajPoteza = true;
@@ -601,7 +601,6 @@ namespace Server
             Socket socket = igracNaPotezu.socket;
             byte[] buffer = new byte[30000];
 
-            // Timeout u mikrosekundama
             int timeoutMicroSeconds = seconds * 1000000;
             List<Socket> readySockets = new List<Socket> { socket };
 
@@ -626,7 +625,7 @@ namespace Server
                 }
             }
 
-            // Timeout istekao
+            // Tajmaut istekao
             throw new TimeoutException($"Tajmer istekao za {igracNaPotezu.ime}");
         }
 
@@ -963,7 +962,7 @@ namespace Server
             try
             {
                 trenutniIgrac.socket.Send(p.Serializuj());
-                Console.WriteLine($"Poruka poslata igracu {trenutniIgrac.ime} Tip poruke: {p.tipPoruke}");
+                Console.WriteLine($"Poruka poslata igracu {trenutniIgrac.ime}. Tip poruke: {p.tipPoruke}");
             }
             catch (SocketException ex)
             {
