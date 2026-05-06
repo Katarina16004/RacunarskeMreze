@@ -556,7 +556,7 @@ namespace Server
                         if (!krajPoteza && !igracNaPotezu.izgubio)
                         {
                             PosaljiTabluGadjanja(igracNaPotezu, napadnuti);
-                            Console.WriteLine("Poslata tablica gadjanja: " + napadnuti.PrikaziMatricuGadjana());
+                            Console.WriteLine("Poslata tablica gadjanja: \n" + napadnuti.PrikaziMatricuGadjana());
                         }
 
                     } while (!krajPoteza);

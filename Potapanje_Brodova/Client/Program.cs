@@ -307,6 +307,7 @@ namespace Server
                 if (DaLiJePristiglaPortuka())
                 {
                     Console.WriteLine("\n[BOT JE ODIGRAO - TIMEOUT!]");
+
                     return "";
                 }
 
@@ -456,7 +457,7 @@ namespace Server
             if (p == null || p.poruka == null)
                 return false;
 
-            Console.WriteLine("═══════════════════════════════════════");
+            Console.WriteLine("\n═══════════════════════════════════════");
             Console.WriteLine("           GADJANJA PROTIVNIKA ");
             Console.WriteLine("═══════════════════════════════════════\n");
             Console.WriteLine(p.poruka);
