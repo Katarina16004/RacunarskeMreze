@@ -417,7 +417,7 @@ namespace Server
                         continue;
                     }
 
-                    // Provjeri da li je protivnik validan
+                    // Proveri da li je protivnik validan
                     if (string.IsNullOrEmpty(imeProtivnika))
                     {
                         Console.WriteLine("GRESKA: Nije odabran protivnik!");

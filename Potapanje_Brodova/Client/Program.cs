@@ -245,9 +245,13 @@ namespace Server
                         {
                             // Timeout - BOT je odigrao
                             p = PrimiPoruku();
+                            /*if (p.tipPoruke == TipPoruke.Izgubio)
+                            {
+                                Console.WriteLine("\nIzgubio si partiju eliminacijom!");
+                                p= PrimiPoruku(); //za slanje poruke o glasanju nakon eliminacije
+                            }*/
                             if (p.tipPoruke == TipPoruke.GlasanjeNova)
                             {
-
                                 Console.WriteLine("\nIzgubio si partiju eliminacijom!");
                                 Console.WriteLine("═══════════════════════════════════════");
                                 Console.WriteLine("             KRAJ PARTIJE");
@@ -586,10 +590,11 @@ namespace Server
             {
                 List<int> polja = new List<int>();
 
-                for (int dx = -1; dx <= 1; dx++)
+                for (int dx = -1; dx <= 1; dx++) //red iznad, isti red, red ispod
                 {
-                    for (int dy = -1; dy <= 1; dy++)
+                    for (int dy = -1; dy <= 1; dy++) //kolona levo, ista kolona, kolona desno
                     {
+                        //koordinate svakog polja u okolini
                         int nx = x + dx;
                         int ny = y + dy;
 

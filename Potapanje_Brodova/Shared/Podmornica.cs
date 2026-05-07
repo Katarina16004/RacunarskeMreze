@@ -37,6 +37,7 @@ namespace Shared
             }
             return false;
         }
+
         // Dodaj pogodjenu poziciju podmornice
         public bool DodajPogodak(int pozicija)
         {
