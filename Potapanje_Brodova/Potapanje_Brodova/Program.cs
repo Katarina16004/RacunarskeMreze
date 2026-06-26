@@ -377,7 +377,7 @@ namespace Server
                             else if (igracNaPotezu.botTimeoutCount == 2)
                             {
                                 // Drugo BOT igranje - novo upozorenje
-                                string upozorenje = $"UPOZORENJE: {igracNaPotezu.ime}!\nNa sledećem isteku vremena biće eliminisan/a!";
+                                string upozorenje = $"UPOZORENJE: {igracNaPotezu.ime}!\nNa sledećem isteku vremena bićeš eliminisan/a!";
                                 Logger.LogIgrac(igracNaPotezu.ime, "BOT UPOZORENJE", "Tajmer istekao drugi put - sledeće je kraj!");
 
                                 try
