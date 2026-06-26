@@ -1,12 +1,68 @@
 ﻿<Window x:Class="ClientWPF.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:ClientWPF"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-        
-    </Grid>
+        Title="Battleship Igra" Height="750" Width="450">
+
+    <Window.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#2C3E50" Offset="0"/>
+            <GradientStop Color="LightSkyBlue" Offset="1"/>
+        </LinearGradientBrush>
+    </Window.Background>
+
+    <Window.Resources>
+        <Style x:Key="ModernButton" TargetType="Button">
+            <Setter Property="Background" Value="#2ECC71"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" CornerRadius="8" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#27AE60"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="#95a5a6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TablaStyle" TargetType="UniformGrid">
+            <Setter Property="Background" Value="White"/>
+        </Style>
+    </Window.Resources>
+
+    <StackPanel Margin="20">
+        <TextBlock Text="Moja tabla" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+
+        <Border CornerRadius="5" Background="White" Padding="2" HorizontalAlignment="Center">
+            <UniformGrid x:Name="MojaTablaGrid" Rows="10" Columns="10" Width="300" Height="300"/>
+        </Border>
+
+        <StackPanel x:Name="UnosPodmornicaPanel" Visibility="Visible" Margin="0,20,0,0">
+            <TextBlock x:Name="StatusUnosa" Text="Postavite brodove..." Foreground="White" FontSize="14" HorizontalAlignment="Center" Margin="5"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Content="H" Click="BtnSmer_Click" Tag="H" Width="50" Height="30" Margin="5" Style="{StaticResource ModernButton}"/>
+                <Button Content="V" Click="BtnSmer_Click" Tag="V" Width="50" Height="30" Margin="5" Style="{StaticResource ModernButton}"/>
+            </StackPanel>
+        </StackPanel>
+
+        <Button x:Name="BtnPotvrdi" Content="POTVRDI RASPORED" Style="{StaticResource ModernButton}" Click="BtnPotvrdi_Click"
+                Height="40" Width="200" Margin="0,15,0,15" IsEnabled="False" FontWeight="Bold" Background="#E74C3C"/>
+
+        <Separator Margin="10" Background="White" Opacity="0.3"/>
+
+        <TextBlock x:Name="LblProtivnik" Text="Protivnička tabla" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Visibility="Collapsed" Margin="0,0,0,10"/>
+        <Border CornerRadius="5" Background="White" Padding="2" HorizontalAlignment="Center">
+            <UniformGrid x:Name="ProtivnickaTablaGrid" Rows="10" Columns="10" Width="300" Height="300" Visibility="Collapsed"/>
+        </Border>
+    </StackPanel>
 </Window>
