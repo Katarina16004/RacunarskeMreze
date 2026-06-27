@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 
 namespace ClientWPF
@@ -13,9 +14,11 @@ namespace ClientWPF
     public partial class MainWindow : Window
     {
         private Socket tcpSocket;
+        private int poslednjiNapadnutiIndeks = -1;
         private List<Podmornica> mojePodmornice = new List<Podmornica>();
         private HashSet<int> zauzetePozicije = new HashSet<int>();
         private Button poslednjeKliknutoDugme = null;
+        private List<int> poslednjeGadjanihPolja = new List<int>();
         private string mojeIme;
         private string imeProtivnika = "";
 
@@ -67,8 +70,9 @@ namespace ClientWPF
                                 UnosPodmornicaPanel.Visibility = Visibility.Visible;
                                 GenerisiTablu();
                                 OsveziInfoZaUnos();
+
+                                InicijalizujProtivnickuTablu();
                             }
-                            InicijalizujProtivnickuTablu();
                             ObradiPorukuSaServera(p);
                         });
                     }
@@ -85,54 +89,116 @@ namespace ClientWPF
             string protivnik = "";
 
             switch (p.tipPoruke)
-                {
-                    case TipPoruke.Obavestenje:
-                        // tabla
-                        if (p.poruka.Contains("0,0,0") || p.poruka.Contains("1,1,1"))
+            {
+                case TipPoruke.Obavestenje:
+                    // tabla
+                    if (p.poruka.Contains("0,0,0") || p.poruka.Contains("1,1,1"))
+                    {
+                        System.Diagnostics.Debug.WriteLine("Primljeni tehnički podaci: " + p.poruka);
+                    }
+                    else
+                    {
+                        StatusUnosa.Text = p.poruka;
+                        if (p.poruka.Contains("Sacekajte"))
                         {
-                            System.Diagnostics.Debug.WriteLine("Primljeni tehnički podaci: " + p.poruka);
+                            protivnik = p.poruka.Split(new string[] { " " }, System.StringSplitOptions.None)[0].Trim();
+                            this.imeProtivnika = protivnik;
+                            TxtImeProtivnika.Text = imeProtivnika;
+                            ProtivnickaTablaGrid.IsEnabled = false;
                         }
-                        else
+                    }
+
+                    break;
+
+                case TipPoruke.Napad:
+                    protivnik = p.poruka.Split(new string[] { "->" }, System.StringSplitOptions.None)[1].Trim();
+                    this.imeProtivnika = protivnik;
+                    TxtImeProtivnika.Text = imeProtivnika;
+
+                    StatusUnosa.Text = "VAŠ POTEZ: Izaberite polje na protivničkoj tabli.";
+                    ProtivnickaTablaGrid.IsEnabled = true;
+
+                    // Automatsko slanje imena protivnika serveru (uvek ce igrati dvoje na wpfu)
+                    Poruka izbor = new Poruka(null, null, TipPoruke.Ostalo, imeProtivnika);
+                    tcpSocket.Send(izbor.Serializuj());
+                    break;
+
+                case TipPoruke.Pogodak:
+                case TipPoruke.Promasaj:
+                    bool jePogodak = (p.tipPoruke == TipPoruke.Pogodak);
+
+                    Dispatcher.Invoke(() => {
+                        foreach (int poz in poslednjeGadjanihPolja)
                         {
-                            StatusUnosa.Text = p.poruka;
-                            if (p.poruka.Contains("Sacekajte"))
+                            var btn = ProtivnickaTablaGrid.Children.OfType<Button>()
+                                        .FirstOrDefault(b => (int)b.Tag == poz);
+
+                            if (btn != null)
                             {
-                                protivnik = p.poruka.Split(new string[] { " " }, System.StringSplitOptions.None)[0].Trim();
-                                this.imeProtivnika = protivnik;
-                                TxtImeProtivnika.Text = imeProtivnika;
-                                ProtivnickaTablaGrid.IsEnabled = false;
+                                if (jePogodak)
+                                {
+                                    //trenutno boji sve u crveno
+                                    // TODO iskoristiti matricu koju je server šalje u istoj poruci
+                                    btn.Background = Brushes.Red;
+                                }
+                                else
+                                {
+                                    btn.Background = Brushes.Blue; // Plava za promašaj
+                                }
+                                btn.IsEnabled = false;
                             }
                         }
-
-                        break;
-
-                    case TipPoruke.Napad:
-                        protivnik = p.poruka.Split(new string[] { "->" }, System.StringSplitOptions.None)[1].Trim();
-                        this.imeProtivnika = protivnik;
-                        TxtImeProtivnika.Text = imeProtivnika;
-
-                        StatusUnosa.Text = "VAŠ POTEZ: Izaberite polje na protivničkoj tabli.";
-                        ProtivnickaTablaGrid.IsEnabled = true;
-
-                        // Automatsko slanje imena protivnika serveru (uvek ce igrati dvoje na wpfu)
-                        Poruka izbor = new Poruka(null, null, TipPoruke.Ostalo, imeProtivnika);
-                        tcpSocket.Send(izbor.Serializuj());
-                        break;
-
-                    case TipPoruke.Pogodak:
-                    case TipPoruke.Promasaj:
                         MessageBox.Show(p.poruka);
-                        break;
+                    });
+                    break;
 
-                    case TipPoruke.Napadnut:
-                        StatusUnosa.Text = "NAPADNUTI STE!";
-                        break;
+                case TipPoruke.Napadnut:
+                    Dispatcher.Invoke(() =>
+                    {
 
-                    case TipPoruke.Kraj:
-                        MessageBox.Show("Igra je završena!");
-                        ProtivnickaTablaGrid.IsEnabled = false;
-                        break;
-                }
+                        string[] delovi = p.poruka.Split(new string[] { "Vasa tabla sada izgleda ovako:\n" }, StringSplitOptions.None);
+                        if (delovi.Length > 1)
+                        {
+                            string matricaString = delovi[1];
+                            string[] redovi = matricaString.Split('\n');
+
+                            for (int i = 0; i < 10; i++)
+                            {
+                                if (i + 1 >= redovi.Length) break;
+                                string red = redovi[i + 1];
+                                string[] elementi = red.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+                                for (int j = 0; j < 10; j++)
+                                {
+                                    if (j + 1 >= elementi.Length) break;
+                                    string stanje = elementi[j + 1];
+
+                                    int index = (i * 10) + j;
+                                    Button btn = MojaTablaGrid.Children[index] as Button;
+
+                                    if (btn != null)
+                                    {
+                                        if (stanje == "x")
+                                        {
+                                            btn.Background = Brushes.Red; // Označi pogodak
+                                            btn.IsEnabled = false;        // Onemogući dalje interakcije na tom polju
+                                        }
+                                        else if (stanje == "+")
+                                        {
+                                            btn.Background = Brushes.White;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    break;
+
+                case TipPoruke.Kraj:
+                    MessageBox.Show("Igra je završena!");
+                    ProtivnickaTablaGrid.IsEnabled = false;
+                    break;
+            }
         }
 
         private void InicijalizujProtivnickuTablu()
@@ -143,10 +209,23 @@ namespace ClientWPF
 
             for (int i = 1; i <= 100; i++)
             {
-                Button btn = new Button { Tag = i, Background = Brushes.LightGray };
+                Button btn = new Button { Tag = i, Background = Brushes.White };
                 
+
+                ControlTemplate template = new ControlTemplate(typeof(Button));
+                FrameworkElementFactory borderFactory = new FrameworkElementFactory(typeof(Border), "border");
+
+                borderFactory.SetBinding(Border.BackgroundProperty, new Binding("Background") { RelativeSource = RelativeSource.TemplatedParent });
+                borderFactory.SetValue(Border.BorderBrushProperty, Brushes.Black);
+                borderFactory.SetValue(Border.BorderThicknessProperty, new Thickness(0.5));
+
+                template.VisualTree = borderFactory;
+                btn.Template = template;
+
                 btn.Click += (s, e) => {
                     int poz = (int)((Button)s).Tag;
+                    poslednjiNapadnutiIndeks = poz; 
+                    poslednjeGadjanihPolja.Clear();
 
                     if (CbSuperPotez.IsChecked == true)
                     {
@@ -163,6 +242,7 @@ namespace ClientWPF
                                 if (nx >= 1 && nx <= 10 && ny >= 1 && ny <= 10)
                                 {
                                     polja.Add((nx - 1) * 10 + ny);
+                                    poslednjeGadjanihPolja.Add((nx - 1) * 10 + ny);
                                 }
                             }
                         }
@@ -170,11 +250,14 @@ namespace ClientWPF
                         Poruka napad = new Poruka(null, null, TipPoruke.Napad, superPoruka);
                         tcpSocket.Send(napad.Serializuj());
 
+                        CbSuperPotez.IsChecked = false; // Resetujemo checkbox
                         CbSuperPotez.Visibility = Visibility.Hidden; // Sakrivamo jer se koristi samo jednom
                     }
                     else
                     {
                         // Običan napad
+                        poslednjeGadjanihPolja.Clear();
+                        poslednjeGadjanihPolja.Add(poz);
                         Poruka napad = new Poruka(null, null, TipPoruke.Napad, poz.ToString());
                         tcpSocket.Send(napad.Serializuj());
                     }
@@ -303,7 +386,6 @@ namespace ClientWPF
             tcpSocket.Send(p.Serializuj());
 
             MessageBox.Show("Podmornice poslate serveru!");
-            StatusUnosa.Text= "Sacekajte protivnika da zavrsi unos.";
             BtnPotvrdi.Visibility = Visibility.Collapsed;
             UnosPodmornicaPanel.Visibility = Visibility.Collapsed;
         }
