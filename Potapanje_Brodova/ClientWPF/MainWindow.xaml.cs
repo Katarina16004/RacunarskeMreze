@@ -1,4 +1,5 @@
 ﻿using Shared;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
@@ -16,6 +17,7 @@ namespace ClientWPF
         private HashSet<int> zauzetePozicije = new HashSet<int>();
         private Button poslednjeKliknutoDugme = null;
         private string mojeIme;
+        private string imeProtivnika = "";
 
         private int[][] zadatak = new int[][] { new int[] { 4, 1 }, new int[] { 3, 2 }, new int[] { 2, 3 }, new int[] { 1, 4 } };
         private int trenutnaGrupa = 0;
@@ -30,7 +32,9 @@ namespace ClientWPF
         {
             InitializeComponent();
             this.mojeIme = ime;
+            TxtImeIgraca.Text = ime;
             this.Loaded += (s, e) => Task.Run(() => PoveziSeNaServer(ime));
+            ProtivnickaTablaGrid.IsEnabled = false;
         }
 
         private void PoveziSeNaServer(string ime)
@@ -39,21 +43,143 @@ namespace ClientWPF
             tcpSocket.Connect("192.168.56.1", 5001);
 
             byte[] buffer = new byte[4096];
+            List<byte> akumulator = new List<byte>();
+
             while (true)
             {
                 int received = tcpSocket.Receive(buffer);
                 if (received > 0)
                 {
-                    Poruka p = Poruka.DeserializujPoruku(buffer);
-                    Dispatcher.Invoke(() => {
-                        if (p.tipPoruke == TipPoruke.Obavestenje)
+                    // Dodaj primljene bajtove u akumulator
+                    for (int i = 0; i < received; i++) akumulator.Add(buffer[i]);
+
+                    try
+                    {
+                        // Pokušaj deserializaciju kompletnog akumulatora
+                        Poruka p = Poruka.DeserializujPoruku(akumulator.ToArray());
+                        // Ako je uspelo, očisti akumulator za sledeću poruku
+                        akumulator.Clear();
+
+                        Dispatcher.Invoke(() =>
                         {
-                            UnosPodmornicaPanel.Visibility = Visibility.Visible;
-                            GenerisiTablu();
-                            OsveziInfoZaUnos();
-                        }
-                    });
+                            if (p.tipPoruke == TipPoruke.Obavestenje && !unosZavrsen)
+                            {
+                                UnosPodmornicaPanel.Visibility = Visibility.Visible;
+                                GenerisiTablu();
+                                OsveziInfoZaUnos();
+                            }
+                            InicijalizujProtivnickuTablu();
+                            ObradiPorukuSaServera(p);
+                        });
+                    }
+                    catch (System.Runtime.Serialization.SerializationException)
+                    {
+                        continue;
+                    }
                 }
+            }
+        }
+
+        private void ObradiPorukuSaServera(Poruka p)
+        {
+            string protivnik = "";
+
+            switch (p.tipPoruke)
+                {
+                    case TipPoruke.Obavestenje:
+                        // tabla
+                        if (p.poruka.Contains("0,0,0") || p.poruka.Contains("1,1,1"))
+                        {
+                            System.Diagnostics.Debug.WriteLine("Primljeni tehnički podaci: " + p.poruka);
+                        }
+                        else
+                        {
+                            StatusUnosa.Text = p.poruka;
+                            if (p.poruka.Contains("Sacekajte"))
+                            {
+                                protivnik = p.poruka.Split(new string[] { " " }, System.StringSplitOptions.None)[0].Trim();
+                                this.imeProtivnika = protivnik;
+                                TxtImeProtivnika.Text = imeProtivnika;
+                                ProtivnickaTablaGrid.IsEnabled = false;
+                            }
+                        }
+
+                        break;
+
+                    case TipPoruke.Napad:
+                        protivnik = p.poruka.Split(new string[] { "->" }, System.StringSplitOptions.None)[1].Trim();
+                        this.imeProtivnika = protivnik;
+                        TxtImeProtivnika.Text = imeProtivnika;
+
+                        StatusUnosa.Text = "VAŠ POTEZ: Izaberite polje na protivničkoj tabli.";
+                        ProtivnickaTablaGrid.IsEnabled = true;
+
+                        // Automatsko slanje imena protivnika serveru (uvek ce igrati dvoje na wpfu)
+                        Poruka izbor = new Poruka(null, null, TipPoruke.Ostalo, imeProtivnika);
+                        tcpSocket.Send(izbor.Serializuj());
+                        break;
+
+                    case TipPoruke.Pogodak:
+                    case TipPoruke.Promasaj:
+                        MessageBox.Show(p.poruka);
+                        break;
+
+                    case TipPoruke.Napadnut:
+                        StatusUnosa.Text = "NAPADNUTI STE!";
+                        break;
+
+                    case TipPoruke.Kraj:
+                        MessageBox.Show("Igra je završena!");
+                        ProtivnickaTablaGrid.IsEnabled = false;
+                        break;
+                }
+        }
+
+        private void InicijalizujProtivnickuTablu()
+        {
+            TxtImeProtivnika.Visibility = Visibility.Visible;
+            ProtivnickaTablaGrid.Visibility = Visibility.Visible;
+            ProtivnickaTablaGrid.Children.Clear();
+
+            for (int i = 1; i <= 100; i++)
+            {
+                Button btn = new Button { Tag = i, Background = Brushes.LightGray };
+                
+                btn.Click += (s, e) => {
+                    int poz = (int)((Button)s).Tag;
+
+                    if (CbSuperPotez.IsChecked == true)
+                    {
+                        int x = ((poz - 1) / 10) + 1;
+                        int y = ((poz - 1) % 10) + 1;
+                        List<int> polja = new List<int>();
+
+                        for (int dx = -1; dx <= 1; dx++)
+                        {
+                            for (int dy = -1; dy <= 1; dy++)
+                            {
+                                int nx = x + dx;
+                                int ny = y + dy;
+                                if (nx >= 1 && nx <= 10 && ny >= 1 && ny <= 10)
+                                {
+                                    polja.Add((nx - 1) * 10 + ny);
+                                }
+                            }
+                        }
+                        string superPoruka = "SUPER|" + string.Join(",", polja);
+                        Poruka napad = new Poruka(null, null, TipPoruke.Napad, superPoruka);
+                        tcpSocket.Send(napad.Serializuj());
+
+                        CbSuperPotez.Visibility = Visibility.Hidden; // Sakrivamo jer se koristi samo jednom
+                    }
+                    else
+                    {
+                        // Običan napad
+                        Poruka napad = new Poruka(null, null, TipPoruke.Napad, poz.ToString());
+                        tcpSocket.Send(napad.Serializuj());
+                    }
+                };
+                ProtivnickaTablaGrid.Children.Add(btn);
             }
         }
 
@@ -72,7 +198,7 @@ namespace ClientWPF
         {
             if (unosZavrsen) return;
             Button trenutniBtn = sender as Button;
-            if (trenutniBtn == null || trenutniBtn.Background==Brushes.Blue) return;
+            if (trenutniBtn == null || trenutniBtn.Background == Brushes.Blue) return;
 
             if (poslednjeKliknutoDugme != null)
             {
@@ -113,7 +239,7 @@ namespace ClientWPF
                 foreach (var p in pozicije) { zauzetePozicije.Add(p); ObojiPolje(p); }
                 if (poslednjeKliknutoDugme != null)
                 {
-                    poslednjeKliknutoDugme.Background = Brushes.Blue; 
+                    poslednjeKliknutoDugme.Background = Brushes.Blue;
                     poslednjeKliknutoDugme = null;
                 }
 
@@ -129,14 +255,13 @@ namespace ClientWPF
 
                 cekamSmer = false;
             }
-            else 
+            else
             {
-
-                if (poslednjeKliknutoDugme != null && poslednjeKliknutoDugme.Background!=Brushes.Blue)
+                if (poslednjeKliknutoDugme != null && poslednjeKliknutoDugme.Background != Brushes.Blue)
                 {
                     poslednjeKliknutoDugme.Background = Brushes.White;
                 }
-                MessageBox.Show("Nevažeća pozicija!"); cekamSmer = false; 
+                MessageBox.Show("Nevažeća pozicija!"); cekamSmer = false;
             }
         }
 
@@ -178,7 +303,8 @@ namespace ClientWPF
             tcpSocket.Send(p.Serializuj());
 
             MessageBox.Show("Podmornice poslate serveru!");
-            BtnPotvrdi.Visibility= Visibility.Collapsed;
+            StatusUnosa.Text= "Sacekajte protivnika da zavrsi unos.";
+            BtnPotvrdi.Visibility = Visibility.Collapsed;
             UnosPodmornicaPanel.Visibility = Visibility.Collapsed;
         }
 
@@ -191,17 +317,14 @@ namespace ClientWPF
                 int nx = horizontalna ? x : x + i;
                 int ny = horizontalna ? y + i : y;
 
-                if (nx < 1 || nx > velTable || ny < 1 || ny > velTable) return null; // Izvan table
+                if (nx < 1 || nx > velTable || ny < 1 || ny > velTable) return null;
 
                 int poz = (nx - 1) * velTable + ny;
-
-                // PROVERA PREKLAPANJA: Ako je ovo polje već zauzeto, ne može se tu postaviti brod
                 if (zauzetePozicije.Contains(poz)) return null;
 
                 potencijalnePozicije.Add(poz);
             }
 
-            // da se ne dodiruju
             foreach (int p in potencijalnePozicije)
             {
                 int px = ((p - 1) / velTable) + 1;
@@ -217,8 +340,6 @@ namespace ClientWPF
                         if (susedX >= 1 && susedX <= velTable && susedY >= 1 && susedY <= velTable)
                         {
                             int susedPoz = (susedX - 1) * velTable + susedY;
-
-                            // Ako je sused zauzet, a nije deo podmornice koju upravo postavljamo -> NE MOŽE
                             if (zauzetePozicije.Contains(susedPoz) && !potencijalnePozicije.Contains(susedPoz))
                             {
                                 return null;
@@ -227,7 +348,6 @@ namespace ClientWPF
                     }
                 }
             }
-
             return potencijalnePozicije;
         }
     }
