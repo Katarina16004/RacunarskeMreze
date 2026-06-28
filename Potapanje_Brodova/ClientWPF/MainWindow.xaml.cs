@@ -276,10 +276,57 @@ namespace ClientWPF
                         Application.Current.Shutdown();
                     });
                     break;
-                
+                case TipPoruke.Ostalo:
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (string.IsNullOrWhiteSpace(p.poruka))
+                        {
+                            ResetujIgru();
+                            StatusUnosa.Text = "Partija resetovana. Postavite podmornice.";
+                        }
+                        
+                    });
+                    break;
             }
         }
+        private void ResetujIgru()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                mojePodmornice.Clear();
+                zauzetePozicije.Clear();
+                poslednjeGadjanihPolja.Clear();
+                tempX = 0; tempY = 0;
+                trenutnaGrupa = 0;
+                postavljenihUGrupi = 0;
+                unosZavrsen = false;
+                brojPromasaja = 0;
+                poslednjeKliknutoDugme = null;
+                imeProtivnika = "";
 
+                MojaTablaGrid.Children.Clear();
+                ProtivnickaTablaGrid.Children.Clear();
+
+                TxtImeProtivnika.Text = "Protivnik";
+                TxtImeProtivnika.Visibility = Visibility.Collapsed;
+                TxtBrojPromasaja.Text = "Uzastopni promašaji: 0";
+                TxtPreostalePodmornice.Text = "10";
+                TxtPreostalePodmorniceMoje.Text = "10";
+                StatusUnosa.Text = "Postavljanje brodova...";
+
+                UnosPodmornicaPanel.Visibility = Visibility.Visible;
+                ProtivnickaTablaGrid.Visibility = Visibility.Collapsed;
+                ProtivnickaTablaGrid.IsEnabled = false;
+                BtnPotvrdi.Visibility = Visibility.Visible;
+                BtnPotvrdi.IsEnabled = false;
+
+                CbSuperPotez.IsChecked = false;
+                CbSuperPotez.Visibility = Visibility.Visible;
+                
+
+                GenerisiTablu();
+            });
+        }
         private void InicijalizujProtivnickuTablu()
         {
             TxtImeProtivnika.Visibility = Visibility.Visible;
