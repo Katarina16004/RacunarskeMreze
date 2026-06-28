@@ -60,6 +60,10 @@
                 </StackPanel>
             </Border>
             <TextBlock Text="Moja tabla" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBlock Text="Broj preostalih podmornica: " Foreground="White" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                <TextBlock x:Name="TxtPreostalePodmorniceMoje" Text="10" Foreground="White" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" />
+            </StackPanel>
 
             <StackPanel Orientation="Horizontal" Margin="10">
                 <CheckBox Visibility="Hidden"/>
@@ -88,7 +92,13 @@
                     <TextBlock x:Name="TxtImeProtivnika" Text="Protivnik" Foreground="White" FontSize="16" FontWeight="Bold"/>
                 </StackPanel>
             </Border>
-            <TextBlock Text="Protivnička tabla" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+            
+            <TextBlock Text="Protivnička tabla " Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBlock Text="Broj preostalih podmornica: " Foreground="White" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                <TextBlock x:Name="TxtPreostalePodmornice" Text="10" Foreground="White" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" />
+            </StackPanel>
+            
 
             <StackPanel Orientation="Horizontal" Margin="10">
                 <CheckBox x:Name="CbSuperPotez" Content="Koristi Super potez (3x3)" IsEnabled="True"/>
@@ -101,6 +111,9 @@
                 <UniformGrid x:Name="ProtivnickaTablaGrid" 
                      Rows="10" Columns="10"/>
             </Border>
+        </StackPanel>
+        <StackPanel Orientation="Vertical" Margin="10">
+            <TextBlock x:Name="TxtBrojPromasaja" Text="Uzastopni promašaji: 0" Foreground="Red" FontWeight="Bold"/>
         </StackPanel>
     </Grid>
 </Window>

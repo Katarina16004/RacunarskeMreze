@@ -21,6 +21,7 @@ namespace ClientWPF
         private List<int> poslednjeGadjanihPolja = new List<int>();
         private string mojeIme;
         private string imeProtivnika = "";
+        private int brojPromasaja = 0;
 
         private int[][] zadatak = new int[][] { new int[] { 4, 1 }, new int[] { 3, 2 }, new int[] { 2, 3 }, new int[] { 1, 4 } };
         private int trenutnaGrupa = 0;
@@ -50,15 +51,16 @@ namespace ClientWPF
 
             while (true)
             {
+                if (tcpSocket == null) break;
                 int received = tcpSocket.Receive(buffer);
                 if (received > 0)
                 {
-                    // Dodaj primljene bajtove u akumulator
+                    // dodajemo primljene bajtove u akumulator
                     for (int i = 0; i < received; i++) akumulator.Add(buffer[i]);
 
                     try
                     {
-                        // Pokušaj deserializaciju kompletnog akumulatora
+                        // deserializacija kompletnog akumulatora
                         Poruka p = Poruka.DeserializujPoruku(akumulator.ToArray());
                         // Ako je uspelo, očisti akumulator za sledeću poruku
                         akumulator.Clear();
@@ -172,13 +174,34 @@ namespace ClientWPF
                                 }
                             }
                         }
+                        if (jePogodak)
+                        {
+                            brojPromasaja=0;
+                        }
+                        else
+                        {
+
+                            brojPromasaja++;
+                        }
+
+                        TxtBrojPromasaja.Text = $"Uzastopni promašaji: {brojPromasaja}";
+                        if (p.poruka.Contains("Preostalo podmornica protivniku je:"))
+                        {
+                            string[] delovi = p.poruka.Split(new string[] { "je: " }, StringSplitOptions.None);
+                            if (delovi.Length > 1)
+                            {
+                                string broj = delovi[1].Trim().Split(' ')[0];
+                                TxtPreostalePodmornice.Text = $"{broj}";
+                            }
+                        }
                         MessageBox.Show(p.poruka);
                     });
                     break;
                 case TipPoruke.Napadnut:
                     Dispatcher.Invoke(() =>
                     {
-
+                        Console.WriteLine("Primljena poruka Napadnut: " + p.poruka);
+                        bool pogodjen = false;
                         string[] delovi = p.poruka.Split(new string[] { "Vasa tabla sada izgleda ovako:\n" }, StringSplitOptions.None);
                         if (delovi.Length > 1)
                         {
@@ -203,24 +226,57 @@ namespace ClientWPF
                                     {
                                         if (stanje == "x")
                                         {
-                                            btn.Background = Brushes.Red; // Označi pogodak
+                                            pogodjen = true;
+                                            btn.Background = Brushes.Red; // pogodak //boji u default
                                             btn.IsEnabled = false;        // Onemogući dalje interakcije na tom polju
-                                        }
-                                        else if (stanje == "+")
-                                        {
-                                            btn.Background = Brushes.White;
                                         }
                                     }
                                 }
                             }
                         }
+                        if (p.poruka.Contains("Preostalo vam je:"))
+                        {
+                            delovi = p.poruka.Split(new string[] { "Preostalo vam je: " }, StringSplitOptions.None);
+                            if (delovi.Length > 1)
+                            {
+                                string broj = delovi[1].Split(' ')[0]; 
+                                TxtPreostalePodmorniceMoje.Text = $"{broj}";
+                            }
+                        }
+                        string statusTekst = pogodjen ? "vas je pogodio! Igra ponovo.." : "vas je promašio!";
+                        StatusUnosa.Text = $"{imeProtivnika} {statusTekst}";
                     });
                     break;
+                case TipPoruke.GlasanjeNova:
+                    Dispatcher.Invoke(() =>
+                    {
+                        var rezultat = MessageBox.Show(p.poruka + "\n\nDa li želite novu partiju?",
+                                                       "Kraj partije",
+                                                       MessageBoxButton.YesNo,
+                                                       MessageBoxImage.Question);
 
-                case TipPoruke.Kraj:
-                    MessageBox.Show("Igra je završena!");
-                    ProtivnickaTablaGrid.IsEnabled = false;
+                        string odgovor = (rezultat == MessageBoxResult.Yes) ? "1" : "2";
+
+                        Poruka pOdgovor = new Poruka(null, null, TipPoruke.Ostalo, odgovor);
+                        tcpSocket.Send(pOdgovor.Serializuj());
+
+                        StatusUnosa.Text = (odgovor == "1") ? "Čekamo protivnika da se odluči..." : "Igra se završava.";
+                    });
                     break;
+                case TipPoruke.Kraj:
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (tcpSocket != null)
+                        {
+                            tcpSocket.Shutdown(SocketShutdown.Both);
+                            tcpSocket.Close();
+                            tcpSocket = null;
+                        }
+
+                        Application.Current.Shutdown();
+                    });
+                    break;
+                
             }
         }
 
