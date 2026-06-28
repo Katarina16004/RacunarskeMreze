@@ -123,35 +123,58 @@ namespace ClientWPF
                     tcpSocket.Send(izbor.Serializuj());
                     break;
 
-                case TipPoruke.Pogodak:
                 case TipPoruke.Promasaj:
+                case TipPoruke.Pogodak:
                     bool jePogodak = (p.tipPoruke == TipPoruke.Pogodak);
+                    bool jeSuperPotez = p.poruka.Contains("Detalji:"); 
 
                     Dispatcher.Invoke(() => {
-                        foreach (int poz in poslednjeGadjanihPolja)
+                        if (jeSuperPotez)
                         {
-                            var btn = ProtivnickaTablaGrid.Children.OfType<Button>()
-                                        .FirstOrDefault(b => (int)b.Tag == poz);
+                            string detalji = p.poruka.Split(new[] { "Detalji:" }, StringSplitOptions.None)[1];
+                            string[] deloviPoruke = detalji.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                            string cistString = deloviPoruke[0];
 
-                            if (btn != null)
+                            string[] stavke = cistString.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+
+                            foreach (string stavka in stavke)
                             {
-                                if (jePogodak)
+                                string ociscenaStavka = stavka.Trim().TrimEnd('.');
+
+                                string[] delovi = ociscenaStavka.Split(':');
+                                if (delovi.Length == 2)
                                 {
-                                    //trenutno boji sve u crveno
-                                    // TODO iskoristiti matricu koju je server šalje u istoj poruci
-                                    btn.Background = Brushes.Red;
+                                    int poz;
+                                    if (int.TryParse(delovi[0], out poz))
+                                    {
+                                        string status = delovi[1];
+                                        var btn = ProtivnickaTablaGrid.Children.OfType<Button>()
+                                                    .FirstOrDefault(b => (int)b.Tag == poz);
+
+                                        if (btn != null)
+                                        {
+                                            btn.Background = (status == "X") ? Brushes.Red : Brushes.Blue;
+                                            btn.IsEnabled = false;
+                                        }
+                                    }
                                 }
-                                else
+                            }
+                        }
+                        else
+                        {
+                            foreach (int poz in poslednjeGadjanihPolja)
+                            {
+                                var btn = ProtivnickaTablaGrid.Children.OfType<Button>().FirstOrDefault(b => (int)b.Tag == poz);
+                                if (btn != null)
                                 {
-                                    btn.Background = Brushes.Blue; // Plava za promašaj
+                                    btn.Background = jePogodak ? Brushes.Red : Brushes.Blue;
+                                    btn.IsEnabled = false;
                                 }
-                                btn.IsEnabled = false;
                             }
                         }
                         MessageBox.Show(p.poruka);
                     });
                     break;
-
                 case TipPoruke.Napadnut:
                     Dispatcher.Invoke(() =>
                     {

@@ -852,6 +852,8 @@ namespace Server
             bool krajPoteza = false;
             string poruka;
 
+            string detaljniStatusi="";
+
             bool jeSuperPotez = polje is string && polje.ToString().StartsWith("SUPER|");
             string poljeString = polje.ToString();
 
@@ -863,6 +865,7 @@ namespace Server
             else
             {
                 // super potez
+                List<string> statusiPolja = new List<string>();
                 rezultatGadjanja = 0;
                 int brojPogodaka = 0;
                 int brojPotopljenih = 0;
@@ -878,8 +881,11 @@ namespace Server
                             int rezultat = Protivnik.AzurirajMatricu(trenutnoPolje);
                             if (rezultat == 2) brojPogodaka++;
                             if (rezultat == 3) brojPotopljenih++;
+
+                            statusiPolja.Add(p_str + ":" + (rezultat >= 2 ? "X" : "P"));
                         }
                     }
+                    detaljniStatusi = string.Join(",", statusiPolja); // npr "1:X,2:P,11:X"
                 }
 
                 if (brojPotopljenih > 0)
@@ -917,7 +923,7 @@ namespace Server
 
                 case 2:
                     trenutniIgrac.brojPromasaja = 0;
-                    poruka = jeSuperPotez ? "Super pogodak!" : "Pogodak!";
+                    poruka = jeSuperPotez ? $"Super pogodak! Detalji:{detaljniStatusi}" : "Pogodak!";
                     info = $"\nPreostalo podmornica protivniku je: {Protivnik.GetBrojPreostalihPodmornica()}\n";
                     p.tipPoruke = TipPoruke.Pogodak;
                     Logger.LogPotez(trenutniIgrac.ime, imeProtivnika, polje.ToString(), poruka);
@@ -935,7 +941,7 @@ namespace Server
                         imePodmornice = potopljena != null ? $"({potopljena.GetDuzina()}x1)" : "";
                     }
 
-                    poruka = jeSuperPotez ? $"Super pogodak! Potopljene podmornice!" : $"Potopljena podmornica! {imePodmornice}";
+                    poruka = jeSuperPotez ? $"Super pogodak! Potopljene podmornice! Detalji:{detaljniStatusi}" : $"Potopljena podmornica! {imePodmornice}";
                     info = $"\nPreostalo podmornica protivniku je: {Protivnik.GetBrojPreostalihPodmornica()}\n";
                     p.tipPoruke = TipPoruke.Pogodak;
                     Logger.LogPotez(trenutniIgrac.ime, imeProtivnika, polje.ToString(), poruka);
