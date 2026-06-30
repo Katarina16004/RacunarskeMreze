@@ -114,6 +114,7 @@
         </StackPanel>
         <StackPanel Orientation="Vertical" Margin="10">
             <TextBlock x:Name="TxtBrojPromasaja" Text="Uzastopni promašaji: 0" Foreground="Red" FontWeight="Bold"/>
+            <TextBlock x:Name="TxtBrojBotPoteza" Text="Preostali broj BOT poteza: 3"  Foreground="Red" FontWeight="Bold"/>
         </StackPanel>
     </Grid>
 </Window>

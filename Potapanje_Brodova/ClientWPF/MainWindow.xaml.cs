@@ -22,6 +22,8 @@ namespace ClientWPF
         private string mojeIme;
         private string imeProtivnika = "";
         private int brojPromasaja = 0;
+        private int brojBotPoteza = 3;
+        private int botPolje;
 
         private int[][] zadatak = new int[][] { new int[] { 4, 1 }, new int[] { 3, 2 }, new int[] { 2, 3 }, new int[] { 1, 4 } };
         private int trenutnaGrupa = 0;
@@ -110,6 +112,27 @@ namespace ClientWPF
                         }
                     }
 
+                    if (p.poruka.Contains("BOT"))
+                    {
+                        StatusUnosa.Text = $"Vreme isteklo! {p.poruka}";
+                        brojBotPoteza--;
+                        TxtBrojBotPoteza.Text = $"Preostali broj BOT poteza: {brojBotPoteza}";
+                        string[] delovi = p.poruka.Split(new string[] { "BOT je odigrao polje:" }, StringSplitOptions.None);
+                        if (delovi.Length > 1)
+                        {
+                            string potencijalniBroj = delovi[1].Trim();
+
+                            string broj = new string(potencijalniBroj.TakeWhile(char.IsDigit).ToArray());
+
+                            if (!string.IsNullOrEmpty(broj))
+                            {
+                                botPolje = int.Parse(broj);
+                                
+                            }
+                        }
+
+                    }
+
                     break;
 
                 case TipPoruke.Napad:
@@ -163,7 +186,18 @@ namespace ClientWPF
                             }
                         }
                         else
-                        {
+                        { 
+                            //bot odigrao
+                            if(poslednjeGadjanihPolja.Count==0)
+                            {
+
+                                var btn = ProtivnickaTablaGrid.Children.OfType<Button>().FirstOrDefault(b => (int)b.Tag == botPolje);
+                                if (btn != null)
+                                {
+                                    btn.Background = jePogodak ? Brushes.Red : Brushes.Blue;
+                                }
+                            }
+
                             foreach (int poz in poslednjeGadjanihPolja)
                             {
                                 var btn = ProtivnickaTablaGrid.Children.OfType<Button>().FirstOrDefault(b => (int)b.Tag == poz);
@@ -301,6 +335,7 @@ namespace ClientWPF
                 postavljenihUGrupi = 0;
                 unosZavrsen = false;
                 brojPromasaja = 0;
+                brojBotPoteza = 3;
                 poslednjeKliknutoDugme = null;
                 imeProtivnika = "";
 
@@ -310,6 +345,7 @@ namespace ClientWPF
                 TxtImeProtivnika.Text = "Protivnik";
                 TxtImeProtivnika.Visibility = Visibility.Collapsed;
                 TxtBrojPromasaja.Text = "Uzastopni promašaji: 0";
+                TxtBrojBotPoteza.Text = "Preostali broj BOT poteza: 3";
                 TxtPreostalePodmornice.Text = "10";
                 TxtPreostalePodmorniceMoje.Text = "10";
                 StatusUnosa.Text = "Postavljanje brodova...";

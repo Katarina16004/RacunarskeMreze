@@ -473,7 +473,9 @@ namespace Server
                                     if (igracNaPotezu.botTimeoutCount == 1)
                                     {
                                         // Prvo BOT igranje - upozorenje
-                                        string upozorenje = $"UPOZORENJE: {igracNaPotezu.ime}!\nBOT je odigrao potez, imaš još 2 šanse!";
+
+                                        poljeProtivnika = BotHelper.IzaberiRandomPolje(VelicinaTable).ToString();
+                                        string upozorenje = $"UPOZORENJE: {igracNaPotezu.ime}!\nBOT je odigrao potez, imaš još 2 šanse!\nBOT je odigrao polje: {poljeProtivnika}";
                                         Logger.LogIgrac(igracNaPotezu.ime, "BOT UPOZORENJE", "Tajmer istekao pri izboru polja");
 
                                         try
@@ -484,15 +486,15 @@ namespace Server
                                         }
                                         catch { }
 
-                                        poljeProtivnika = BotHelper.IzaberiRandomPolje(VelicinaTable).ToString();
-                                        Console.WriteLine($"BOT je odigrao polje: {poljeProtivnika}\n");
                                         Logger.LogIgrac(igracNaPotezu.ime, "BOT POTEZ", $"Polje: {poljeProtivnika}");
                                         break;
                                     }
                                     else if (igracNaPotezu.botTimeoutCount == 2)
                                     {
                                         // Drugo BOT igranje - novo upozorenje
-                                        string upozorenje = $"UPOZORENJE: {igracNaPotezu.ime}!\nNa sledećem isteku vremena biće eliminisan/a!";
+
+                                        poljeProtivnika = BotHelper.IzaberiRandomPolje(VelicinaTable).ToString();
+                                        string upozorenje = $"UPOZORENJE: {igracNaPotezu.ime}!\nNa sledećem isteku vremena bićeš eliminisan/a!\nBOT je odigrao polje: {poljeProtivnika}";
                                         Logger.LogIgrac(igracNaPotezu.ime, "BOT UPOZORENJE", "Tajmer istekao drugi put pri izboru polja!");
 
                                         try
@@ -503,8 +505,6 @@ namespace Server
                                         }
                                         catch { }
 
-                                        poljeProtivnika = BotHelper.IzaberiRandomPolje(VelicinaTable).ToString();
-                                        Console.WriteLine($"BOT je odigrao polje: {poljeProtivnika}\n");
                                         Logger.LogIgrac(igracNaPotezu.ime, "BOT POTEZ", $"Novo polje: {poljeProtivnika}");
                                         break;
                                     }
