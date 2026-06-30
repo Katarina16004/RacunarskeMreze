@@ -64,7 +64,7 @@ namespace ClientWPF
                     {
                         // deserializacija kompletnog akumulatora
                         Poruka p = Poruka.DeserializujPoruku(akumulator.ToArray());
-                        // Ako je uspelo, očisti akumulator za sledeću poruku
+
                         akumulator.Clear();
 
                         Dispatcher.Invoke(() =>
@@ -80,9 +80,20 @@ namespace ClientWPF
                             ObradiPorukuSaServera(p);
                         });
                     }
-                    catch (System.Runtime.Serialization.SerializationException)
+                    catch (Exception ex)
                     {
-                        continue;
+                        if (ex is System.Security.Cryptography.CryptographicException ||
+                            ex is System.Runtime.Serialization.SerializationException)
+                        {
+                            // Ovo znači da podaci nisu kompletni ili su pogrešni.
+                            // Nastavljamo da akumuliramo dok ne dobijemo sve bajtove.
+                            continue;
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("Kritična greška: " + ex.Message);
+                            break;
+                        }
                     }
                 }
             }

@@ -218,7 +218,8 @@ namespace Server
 
                         if (messLength > 0)
                         {
-                            Poruka p = Poruka.DeserializujPoruku(buffer);
+                            byte[] realData = buffer.Take(messLength).ToArray();
+                            Poruka p = Poruka.DeserializujPoruku(realData);
                             string[] delovi = p.poruka.Split('|');
                             string ime = delovi[0];
                             string podmornicaString = delovi[1];
@@ -613,7 +614,9 @@ namespace Server
                     int bytesReceived = socket.Receive(buffer);
                     if (bytesReceived > 0)
                     {
-                        Poruka p = Poruka.DeserializujPoruku(buffer);
+                        byte[] realData = new byte[bytesReceived];
+                        Array.Copy(buffer, realData, bytesReceived);
+                        Poruka p = Poruka.DeserializujPoruku(realData);
                         Console.WriteLine($"Primljen odgovor od {igracNaPotezu.ime}: {p.poruka}");
                         return p.poruka;
                     }
@@ -742,8 +745,9 @@ namespace Server
 
                         if (messLength > 0)
                         {
-                            Poruka odgovor = new Poruka();
-                            odgovor = Poruka.DeserializujPoruku(buffer);
+                            byte[] realData = new byte[messLength];
+                            Array.Copy(buffer, realData, messLength);
+                            Poruka odgovor = Poruka.DeserializujPoruku(realData);
                             if (odgovor.poruka.Contains("2"))
                             {
                                 NovaIgra = false;

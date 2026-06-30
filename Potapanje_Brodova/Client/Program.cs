@@ -669,9 +669,13 @@ namespace Server
             {
                 byte[] dataBuffer = new byte[40806];
                 int bytesRead = clientSocket.Receive(dataBuffer);
+
                 if (bytesRead > 0)
                 {
-                    p = Poruka.DeserializujPoruku(dataBuffer);
+                    byte[] stvarniPodaci = new byte[bytesRead];
+                    Array.Copy(dataBuffer, stvarniPodaci, bytesRead);
+
+                    p = Poruka.DeserializujPoruku(stvarniPodaci);
                 }
             }
             catch (SocketException e)
@@ -679,6 +683,13 @@ namespace Server
                 Console.WriteLine($"Greska u konekciji! {e}");
                 ZatvoriTCPKonenciju();
             }
+            catch (System.Security.Cryptography.CryptographicException)
+            {
+            }
+            catch (System.Runtime.Serialization.SerializationException)
+            {
+            }
+
             return p;
         }
 
