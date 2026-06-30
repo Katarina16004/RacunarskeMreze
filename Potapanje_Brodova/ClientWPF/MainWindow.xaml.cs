@@ -295,10 +295,15 @@ namespace ClientWPF
                 case TipPoruke.GlasanjeNova:
                     Dispatcher.Invoke(() =>
                     {
-                        var rezultat = MessageBox.Show(p.poruka + "\n\nDa li želite novu partiju?",
-                                                       "Kraj partije",
-                                                       MessageBoxButton.YesNo,
-                                                       MessageBoxImage.Question);
+                        string poruka = "";
+                        if (p.poruka.Contains(mojeIme))
+                            poruka = "Čestitam! Pobedio si!";
+                        else
+                            poruka = $"Nažalost, igrač {imeProtivnika} Vas je pobedio!";
+                        var rezultat = MessageBox.Show(poruka + "\n\nDa li želite novu partiju?",
+                                                        "Kraj partije",
+                                                        MessageBoxButton.YesNo,
+                                                        MessageBoxImage.Question);
 
                         string odgovor = (rezultat == MessageBoxResult.Yes) ? "1" : "2";
 
