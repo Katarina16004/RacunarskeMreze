@@ -22,7 +22,9 @@ namespace Server
 
         private static List<Socket> clientSockets = null;
 
-        public static Socket serverSocket = null;
+        //public static Socket serverSocket = null;
+        public static Socket udpServerSocket = null;
+        public static Socket tcpServerSocket = null;
         private static int MaxBrojIgraca = 0;
         private static int VelicinaTable = 10;
         private static int MaxUzastopnihGresaka = 0;
@@ -30,6 +32,7 @@ namespace Server
         private static bool krajPartije = false;
         private static int rezultatGadjanja;
         private static int sekundeCekanjaNaUnos = 14;
+        private static int sekundeCekanjaNovihIgraca = 30;
 
         static void Main(string[] args)
         {
@@ -60,9 +63,9 @@ namespace Server
 
         static void UcitajIgrace()
         {
-            serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            udpServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             IPEndPoint serverEP = new IPEndPoint(IPAddress.Any, 60002);
-            serverSocket.Bind(serverEP);
+            udpServerSocket.Bind(serverEP);
             EndPoint posiljaocEP = new IPEndPoint(IPAddress.Any, 0);
             byte[] binarnaPoruka;
             byte[] prijemniBafer = new byte[128];
@@ -70,7 +73,7 @@ namespace Server
             {
                 try
                 {
-                    int brBajta = serverSocket.ReceiveFrom(prijemniBafer, ref posiljaocEP);
+                    int brBajta = udpServerSocket.ReceiveFrom(prijemniBafer, ref posiljaocEP);
                     string poruka = Encoding.UTF8.GetString(prijemniBafer, 0, brBajta);
                     Console.WriteLine($"Pokusaj prijave od {posiljaocEP}");
                     string ime = poruka.Substring(7);
@@ -117,7 +120,7 @@ namespace Server
                     {
                         binarnaPoruka = Encoding.UTF8.GetBytes("Neuspesno ubacen na server. razlog: \n" + errorMessage + '\0');
                     }
-                    brBajta = serverSocket.SendTo(binarnaPoruka, 0, binarnaPoruka.Length, SocketFlags.None, posiljaocEP);
+                    brBajta = udpServerSocket.SendTo(binarnaPoruka, 0, binarnaPoruka.Length, SocketFlags.None, posiljaocEP);
                 }
                 catch (SocketException ex)
                 {
@@ -131,10 +134,10 @@ namespace Server
             foreach (Klijent k in Klijenti)
             {
                 binarnaPoruka = Encoding.UTF8.GetBytes("SPREMAN" + '\0');
-                serverSocket.SendTo(binarnaPoruka, 0, binarnaPoruka.Length, SocketFlags.None, k.IPAdresa);
+                udpServerSocket.SendTo(binarnaPoruka, 0, binarnaPoruka.Length, SocketFlags.None, k.IPAdresa);
             }
 
-            serverSocket.Close();
+            udpServerSocket.Close();
         }
 
         private static void UnesiParametreIgre()
@@ -149,11 +152,11 @@ namespace Server
 
         private static void UspostaviTCPKonekciju()
         {
-            Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            tcpServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             IPEndPoint serverEP = new IPEndPoint(IPAddress.Any, 5001);
-            serverSocket.Bind(serverEP);
-            serverSocket.Listen(MaxBrojIgraca);
-            serverSocket.Blocking = false;
+            tcpServerSocket.Bind(serverEP);
+            tcpServerSocket.Listen(10);
+            tcpServerSocket.Blocking = false;
 
             clientSockets = new List<Socket>();
             readySockets = new List<Socket>();
@@ -161,13 +164,13 @@ namespace Server
             while (clientSockets.Count != MaxBrojIgraca)
             {
                 readySockets.Clear();
-                readySockets.Add(serverSocket);
+                readySockets.Add(tcpServerSocket);
 
                 Socket.Select(readySockets, null, null, 1000);
 
                 if (readySockets.Count > 0)
                 {
-                    Socket clientSocket = serverSocket.Accept();
+                    Socket clientSocket = tcpServerSocket.Accept();
                     clientSocket.Blocking = true;
                     clientSockets.Add(clientSocket);
                     Console.WriteLine($"Novi klijent povezan: {clientSocket.RemoteEndPoint}");
@@ -275,6 +278,90 @@ namespace Server
             }
         }
 
+        private static bool PrimiJednogNovogIgraca(int timeoutSekundi)
+        {
+            DateTime kraj = DateTime.Now.AddSeconds(timeoutSekundi);
+
+            // UDP socket samo za prijavu novog igrača
+            using (Socket udp = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
+            {
+                udp.Bind(new IPEndPoint(IPAddress.Any, 60002));
+                udp.ReceiveTimeout = 1000; // 1s polling
+
+                EndPoint posiljaocEP = new IPEndPoint(IPAddress.Any, 0);
+                byte[] prijemniBafer = new byte[256];
+
+                while (DateTime.Now < kraj)
+                {
+                    try
+                    {
+                        int brBajta = udp.ReceiveFrom(prijemniBafer, ref posiljaocEP);
+                        string poruka = Encoding.UTF8.GetString(prijemniBafer, 0, brBajta);
+
+                        if (!poruka.StartsWith("PRIJAVA"))
+                            continue;
+
+                        string ime = poruka.Substring(7).Trim();
+                        if (string.IsNullOrWhiteSpace(ime))
+                            continue;
+
+                        // Provera duplog imena u AKTUELNIM igracima
+                        if (Igraci.Any(i => i.ime == ime))
+                        {
+                            byte[] neuspesno = Encoding.UTF8.GetBytes("Neuspesno ubacen na server. razlog:\nVec postoji client sa datim imenom\0");
+                            udp.SendTo(neuspesno, 0, neuspesno.Length, SocketFlags.None, posiljaocEP);
+                            continue;
+                        }
+
+                        // Uspesna UDP prijava
+                        byte[] uspesno = Encoding.UTF8.GetBytes("Uspesno ubacen na server");
+                        udp.SendTo(uspesno, 0, uspesno.Length, SocketFlags.None, posiljaocEP);
+
+                        byte[] spreman = Encoding.UTF8.GetBytes("SPREMAN\0");
+                        udp.SendTo(spreman, 0, spreman.Length, SocketFlags.None, posiljaocEP);
+
+                        Console.WriteLine($"Novi igrac prijavljen (UDP): {ime} {posiljaocEP}");
+
+                        // Sacekaj TCP konekciju tog novog igraca
+                        tcpServerSocket.Blocking = false;
+                        DateTime krajTcp = DateTime.Now.AddSeconds(10);
+
+                        while (DateTime.Now < krajTcp)
+                        {
+                            List<Socket> rs = new List<Socket> { tcpServerSocket };
+                            Socket.Select(rs, null, null, 500000); // 0.5s
+
+                            if (rs.Count > 0)
+                            {
+                                Socket noviTcp = tcpServerSocket.Accept();
+                                noviTcp.Blocking = true;
+
+                                clientSockets.Add(noviTcp);
+
+                                Igrac noviIgrac = new Igrac(noviTcp, Igraci.Count, VelicinaTable);
+                                noviIgrac.ime = ime;
+                                Igraci.Add(noviIgrac);
+
+                                Console.WriteLine($"Novi igrac povezan (TCP): {ime} {noviTcp.RemoteEndPoint}");
+                                return true;
+                            }
+                        }
+
+                        return false; // UDP prijava je prosla, ali TCP nije stigao na vreme
+                    }
+                    catch (SocketException ex)
+                    {
+                        if (ex.SocketErrorCode == SocketError.TimedOut)
+                            continue;
+
+                        Console.WriteLine($"Greska pri prijavi novog igraca: {ex.Message}");
+                    }
+                }
+            }
+
+            return false;
+        }
+
         private static void ZatvoriUticnice()
         {
             foreach (Igrac i in Igraci)
@@ -282,8 +369,8 @@ namespace Server
                 if (i.socket != null && i.socket.Connected)
                     i.socket.Close();
             }
-            if (serverSocket != null)
-                serverSocket.Close();
+            if (tcpServerSocket != null) tcpServerSocket.Close();
+            if (udpServerSocket != null) udpServerSocket.Close();
         }
 
         private static void PosaljiKlijentimaTable()
@@ -726,13 +813,14 @@ namespace Server
             Poruka p = new Poruka();
             int brojPrimljenihPoruka = 0;
 
+            List<Igrac> ostaju = new List<Igrac>();
+            List<Igrac> odlaze = new List<Igrac>();
+
             while (brojPrimljenihPoruka < clientSockets.Count)
             {
                 readySockets.Clear();
                 foreach (Socket clientSocket in clientSockets)
-                {
                     readySockets.Add(clientSocket);
-                }
 
                 Socket.Select(readySockets, null, null, 1000);
 
@@ -748,10 +836,16 @@ namespace Server
                             byte[] realData = new byte[messLength];
                             Array.Copy(buffer, realData, messLength);
                             Poruka odgovor = Poruka.DeserializujPoruku(realData);
-                            if (odgovor.poruka.Contains("2"))
+
+                            Igrac igrac = Igraci.FirstOrDefault(x => x.socket == s);
+                            if (igrac != null)
                             {
-                                NovaIgra = false;
+                                if (odgovor.poruka.Contains("2"))
+                                    odlaze.Add(igrac);
+                                else
+                                    ostaju.Add(igrac);
                             }
+
                             Console.WriteLine("Primljena poruka od:" + s.RemoteEndPoint);
                             brojPrimljenihPoruka++;
                         }
@@ -763,33 +857,81 @@ namespace Server
                 }
             }
 
-            if (NovaIgra == false)
+            // Zatvori one koji ne zele novu partiju
+            Poruka krajPoruka = new Poruka() { tipPoruke = TipPoruke.Kraj };
+            foreach (Igrac i in odlaze.ToList())
             {
-                p.tipPoruke = TipPoruke.Kraj;
-                Console.WriteLine("Program se zavrsava sa radom, pritisnite bilo koje dugme da ga ugasite!");
+                try { i.socket.Send(krajPoruka.Serializuj()); } catch { }
+                try { i.socket.Shutdown(SocketShutdown.Both); } catch { }
+                try { i.socket.Close(); } catch { }
+
+                clientSockets.Remove(i.socket);
+                Igraci.Remove(i);
             }
-            else
+
+            // Niko ne ostaje
+            if (ostaju.Count == 0 || Igraci.Count == 0)
+            {
+                NovaIgra = false;
+                Console.WriteLine("Niko ne zeli novu partiju. Gasenje servera.");
+                Environment.Exit(0);
+                return;
+            }
+
+            // Ako su ostala bar 2 igraca -> odmah nova partija
+            if (Igraci.Count >= 2)
             {
                 krajPartije = false;
-                Thread.Sleep(2000);
                 p.tipPoruke = TipPoruke.Ostalo;
-                Console.WriteLine("Pokrecemo novu partiju");
+                p.poruka = "";
+
+                foreach (Igrac i in Igraci)
+                {
+                    i.ResetujIgraca();
+                    try { i.socket.Send(p.Serializuj()); } catch { }
+                }
+                return;
             }
+
+            // Ostao je tacno 1 igrac: on ostaje u MainWindow i ceka jednog novog
+            try
+            {
+                Poruka cekanje = new Poruka(null, null, TipPoruke.Obavestenje,
+                    $"Cekamo novog igraca ({sekundeCekanjaNovihIgraca}s)...");
+                Igraci[0].socket.Send(cekanje.Serializuj());
+            }
+            catch { }
+
+            bool stigaoNovi = PrimiJednogNovogIgraca(sekundeCekanjaNovihIgraca);
+
+            if (!stigaoNovi || Igraci.Count < 2)
+            {
+                NovaIgra = false;
+                p.tipPoruke = TipPoruke.Kraj;
+                p.poruka = "Nije se prijavio novi igrac na vreme.";
+
+                foreach (Igrac i in Igraci)
+                {
+                    try { i.socket.Send(p.Serializuj()); } catch { }
+                    try { i.socket.Shutdown(SocketShutdown.Both); } catch { }
+                    try { i.socket.Close(); } catch { }
+                }
+
+                Console.WriteLine("Nije se prijavio novi igrac. Gasenje servera.");
+                Environment.Exit(0);
+                return;
+            }
+
+            // Sad imamo 2 igraca: stari + novi
+            krajPartije = false;
+            p.tipPoruke = TipPoruke.Ostalo;
+            p.poruka = "";
 
             foreach (Igrac i in Igraci)
             {
                 i.ResetujIgraca();
-                try
-                {
-                    i.socket.Send(p.Serializuj());
-                    Console.WriteLine($"Poruka poslata igracu {i.ime} Tip poruke: {p.tipPoruke}");
-                }
-                catch (SocketException ex)
-                {
-                    Console.WriteLine($"Greska pri slanju poruke igracu {i.ime}: {ex.Message}");
-                }
+                try { i.socket.Send(p.Serializuj()); } catch { }
             }
-            if (NovaIgra == false) Environment.Exit(0);
         }
 
         private static void ObavestiOstaleONapadu(Igrac trenutniIgrac, Igrac protivnik, string ishod)

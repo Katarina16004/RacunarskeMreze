@@ -144,6 +144,13 @@ namespace ClientWPF
 
                     }
 
+                    if (p.poruka.Contains("Cekamo nove igrace"))
+                    {
+                        StatusUnosa.Text = p.poruka;
+                        ProtivnickaTablaGrid.IsEnabled = false;
+                        return;
+                    }
+
                     break;
 
                 case TipPoruke.Napad:
