@@ -214,7 +214,7 @@ namespace ClientWPF
                                 var btn = ProtivnickaTablaGrid.Children.OfType<Button>().FirstOrDefault(b => (int)b.Tag == poz);
                                 if (btn != null)
                                 {
-                                    btn.Background = jePogodak ? Brushes.Red : Brushes.Blue;
+                                    btn.Background = jePogodak ? Brushes.Red : Brushes.Gray;
                                     btn.IsEnabled = false;
                                 }
                             }
@@ -272,7 +272,7 @@ namespace ClientWPF
                                         if (stanje == "x")
                                         {
                                             pogodjen = true;
-                                            btn.Background = Brushes.Red; // pogodak //boji u default
+                                            btn.Background = Brushes.LightBlue; // pogodak moje podmornice
                                             btn.IsEnabled = false;        // Onemogući dalje interakcije na tom polju
                                         }
                                     }
@@ -450,6 +450,15 @@ namespace ClientWPF
             for (int i = 1; i <= 100; i++)
             {
                 Button btn = new Button { Tag = i, Background = Brushes.White };
+
+                ControlTemplate template = new ControlTemplate(typeof(Button));
+                FrameworkElementFactory borderFactory = new FrameworkElementFactory(typeof(Border), "border");
+                borderFactory.SetBinding(Border.BackgroundProperty, new Binding("Background") { RelativeSource = RelativeSource.TemplatedParent });
+                borderFactory.SetValue(Border.BorderBrushProperty, Brushes.Black);
+                borderFactory.SetValue(Border.BorderThicknessProperty, new Thickness(0.5));
+                template.VisualTree = borderFactory;
+                btn.Template = template;
+
                 btn.Click += Polje_Click;
                 MojaTablaGrid.Children.Add(btn);
             }
