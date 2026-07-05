@@ -196,7 +196,7 @@ namespace ClientWPF
 
                                         if (btn != null)
                                         {
-                                            btn.Background = (status == "X") ? Brushes.Red : Brushes.Blue;
+                                            btn.Background = (status == "X") ? Brushes.Red : Brushes.Gray;
                                             btn.IsEnabled = false;
                                         }
                                     }
@@ -212,7 +212,7 @@ namespace ClientWPF
                                 var btn = ProtivnickaTablaGrid.Children.OfType<Button>().FirstOrDefault(b => (int)b.Tag == botPolje);
                                 if (btn != null)
                                 {
-                                    btn.Background = jePogodak ? Brushes.Red : Brushes.Blue;
+                                    btn.Background = jePogodak ? Brushes.Red : Brushes.Gray;
                                 }
                             }
 
