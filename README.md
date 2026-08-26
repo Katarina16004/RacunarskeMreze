@@ -1,45 +1,61 @@
+# Network Battleship Game with Cryptographic Protection & Automated Gameplay
 
-# Battleship Multiplayer Game
+A non-blocking client-server implementation of the classic Battleship game.
 
 ## Project Description
 This project is a **client-server multiplayer game** implementation of **Battleship**.  
-The server is the central authority that manages player registration, board states, turns, and game results, while clients handle the user’s gameplay interaction.  
-Both **UDP** and **TCP** sockets are used for communication.  
-
-- **UDP** – used for fast and lightweight player registration.  
-- **TCP** – used for reliable gameplay communication.  
+The server acts as the central authority that manages player registration, board states, turns, timeouts, and game results, while clients handle the interactive graphical gameplay.  
+Both **UDP** and **TCP** sockets are used for communication:
+- **UDP** – Used for fast and lightweight player discovery and registration phases.
+- **TCP** – Used for reliable, ordered gameplay communication and state synchronization.
 
 ---
 
 ## Features
-- **Centralized server** that controls:  
-  - Player registration  
-  - Game initialization  
-  - Turns and move validation  
-  - Victory conditions  
 
-- **Client gameplay**:  
-  - Register via UDP.  
-  - After registration, connect via TCP for gameplay.  
-  - Place submarines on the grid according to board size.  
-  - Take turns to attack opponents by choosing coordinates.  
+### **Centralized Server Authority**
+- Manages player registration and lobby states.
+- Handles game initialization and dynamic board configurations.
+- Validates turns, tracks hits, misses, and sunk submarines.
+- Enforces victory conditions and bonus turns for successful hits.
+- Implements strict move timers with automated bot fallback and penalty logic.
 
-- **Game mechanics**:  
-  - Track hits, misses, and sunk submarines.  
-  - Bonus turns for successful hits.  
-  - Difficulty levels defined by:  
-    - Board size  
-    - Allowed consecutive misses  
+### **WPF Client Gameplay**
+- Modern desktop user interface built with **WPF**.
+- UDP-based registration followed by a stable TCP connection for gameplay.
+- Interactive fleet placement on customized board dimensions.
+- Turn-based coordinate attacks with real-time grid and status updates.
+
+### **Advanced Architecture & Mechanics**
+- **Cryptographic Security:** End-to-end **AES-256 encryption** safeguarding sensitive communication streams between clients and the server.
+- **Automated Bot Management:** Intelligent bot fallback triggered on player timeouts to maintain seamless game flow.
+- **Difficulty Levels:** Configurable parameters including allowed consecutive misses.
+
 ---
 
-## Future Improvements
-- Graphical client **UI** (WPF)
-- Support for multiple submarine types and advanced rules
-- Add a **super move** that can be used only once per game, with configurable behavior
-- Per-move **timer**
-    - On timeout, a simple bot plays a random valid move instead of the player.
-    - On the second bot move, the player receives a warning that one more timeout will end the game for them.
-    - On the third timeout, the player is disconnected and considered defeated, while the remaining players continue.
-- Log the full course of each game to a file
-- **Encrypt messages** between client and server.
-  
+## Tech Stack
+- **Language:** C# (.NET)
+- **Framework:** WPF (Windows Presentation Foundation) 
+- **Networking:** System.Net.Sockets (Asynchronous TCP & UDP)
+- **Security:** System.Security.Cryptography (AES-256)
+
+---
+
+## Getting Started
+
+### Prerequisites
+* Visual Studio (2022 or newer) with .NET workload installed.
+* Compatible .NET Runtime SDK.
+
+### Running the Application
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Katarina16004/RacunarskeMreze
+   
+2. Open the solution file (.sln) in Visual Studio.
+
+3. Set the Server as the startup project and launch it.
+
+4. Launch 2 instances of the WPF Client application.
+
+5. Register via the UI, set up your fleet, and enjoy the game!
